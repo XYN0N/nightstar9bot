@@ -10,12 +10,16 @@
   <div class="container">
     <h1>Welcome to Telegram Betting App</h1>
     <p>Join us and start betting with your friends!</p>
-    <a href="https://telegram.me/<%= telegramBotToken.split(':')[0] %>">
-      <button class="btn btn-primary">Join</button>
-    </a>
+    <button class="btn btn-primary" onclick="joinTelegram()">Join</button>
     <div id="status" class="status"></div>
   </div>
   <script>
+    function joinTelegram() {
+      const telegramBotToken = '<%= telegramBotToken.split(":")[0] %>';
+      const url = `https://telegram.me/${telegramBotToken}`;
+      window.open(url, '_blank');
+    }
+
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('error')) {
       document.getElementById('status').innerText = 'Please send /start to @nightstar9bot first.';

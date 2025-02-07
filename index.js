@@ -38,9 +38,10 @@ redisClient.on('error', (err) => {
 // Configurazione sessione
 app.use(session({
   store: new RedisStore({ client: redisClient }),
-  secret: 'keyboard cat',
+  secret: process.env.SESSION_SECRET,
   resave: false,
-  saveUninitialized: false
+  saveUninitialized: false,
+  cookie: { maxAge: 2 * 60 * 60 * 1000 } // 2 ore di inattività
 }));
 
 // Middleware
@@ -103,6 +104,9 @@ app.get('/login/:token', (req, res) => {
 
     // Salva l'ID utente nella sessione
     req.session.userId = user._id;
+
+    // Elimina il token da Redis
+    redisClient.del(token);
 
     // Reindirizza alla home
     res.redirect('/home');
