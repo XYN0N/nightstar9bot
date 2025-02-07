@@ -15,12 +15,22 @@ const port = process.env.PORT || 3000;
 // Connessione a MongoDB
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('MongoDB connected'))
-  .catch(err => console.log(err));
+  .catch(err => console.log('MongoDB connection error:', err));
 
 // Connessione a Redis
-const redisClient = redis.createClient(process.env.REDIS_URL);
+const redisClient = redis.createClient({
+  url: process.env.REDIS_URL,
+  socket: {
+    reconnectStrategy: () => 1000 // Reconnect every second
+  }
+});
+
 redisClient.on('connect', () => {
   console.log('Redis connected');
+});
+
+redisClient.on('error', (err) => {
+  console.log('Redis connection error:', err);
 });
 
 // Configurazione sessione
@@ -41,6 +51,10 @@ const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
 bot.on('polling_error', (error) => console.log(error));
 
 // Rotte
+app.get('/', (req, res) => {
+  res.send('Benvenuto alla pagina principale!');
+});
+
 require('./routes/profile')(app, bot);
 require('./routes/challenges')(app, bot, google);
 require('./routes/recharge')(app, bot, google);
