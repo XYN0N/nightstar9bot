@@ -97,6 +97,8 @@ bot.onText(/\/challenge (\d+)/, (msg, match) => {
         await gameSession.save();
 
         bot.sendMessage(chatId, `${winner.name} wins with number ${player1Number} vs ${player2Number}!`);
+        bot.sendMessage(winner.telegramId, `Congratulations! You won ${betAmount} stars in a match against ${loser.name}.`);
+        bot.sendMessage(loser.telegramId, `Sorry, you lost ${betAmount} stars in a match against ${winner.name}.`);
     });
 });
 
