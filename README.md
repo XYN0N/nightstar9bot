@@ -1,2 +1,1 @@
-# nightstar9bot
-nightstar9bot
+// Content for README.md
