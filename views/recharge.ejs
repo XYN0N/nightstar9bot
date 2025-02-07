@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recharge</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Recharge</h1>
+    <form action="/recharge" method="post">
+      <label for="amount">Amount:</label>
+      <input type="number" name="amount" id="amount" min="1" required>
+      <input type="hidden" id="paymentData" name="paymentData">
+      <button type="submit">Recharge</button>
+    </form>
+    <button id="google-pay-button">Pay with Google Wallet</button>
+  </div>
+  <script src="https://pay.google.com/gp/p/js/pay.js"></script>
+  <script>
+    const googlePayClient = new google.payments.api.PaymentsClient({ environment: 'TEST' });
+
+    const paymentDataRequest = {
+      apiVersion: 2,
+      apiVersionMinor: 0,
+      allowedPaymentMethods: [{
+        type: 'CARD',
+        parameters: {
+          allowedAuthMethods: ['PAN_ONLY', 'CRYPTOGRAM_3DS'],
+          allowedCardNetworks: ['MASTERCARD', 'VISA']
+        },
+        tokenizationSpecification: {
+          type: 'PAYMENT_GATEWAY',
+          parameters: {
+            gateway: 'example',
+            gatewayMerchantId: 'exampleGatewayMerchantId'
+          }
+        }
+      }],
+      merchantInfo: {
+        merchantId: '12345678901234567890',
+        merchantName: 'Example Merchant'
+      },
+      transactionInfo: {
+        totalPriceStatus: 'FINAL',
+        totalPriceLabel: 'Total',
+        totalPrice: '1.00',
+        currencyCode: 'USD',
+        countryCode: 'US'
+      }
+    };
+
+    const googlePayButton = googlePayClient.createButton({
+      onClick: () => {
+        googlePayClient.loadPaymentData(paymentDataRequest).then(paymentData => {
+          document.getElementById('paymentData').value = JSON.stringify(paymentData);
+        }).catch(error => {
+          console.error(error);
+        });
+      }
+    });
+
+    document.getElementById('google-pay-button').appendChild(googlePayButton);
+  </script>
+</body>
+</html>
