@@ -1,0 +1,22 @@
+{
+  "name": "telegram-betting-app",
+  "version": "1.0.0",
+  "description": "A comprehensive Telegram mini-app that involves betting, a 1v1 challenge system, and integration with Google Wallet for transactions.",
+  "main": "server/app.js",
+  "scripts": {
+    "start": "node server/app.js"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "mongoose": "^5.11.15",
+    "morgan": "^1.10.0",
+    "cors": "^2.8.5",
+    "redis": "^3.1.2",
+    "node-telegram-bot-api": "^0.50.0"
+  },
+  "engines": {
+    "node": "14.x"
+  },
+  "author": "Your Name",
+  "license": "MIT"
+}
