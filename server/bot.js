@@ -16,13 +16,13 @@ bot.onText(/\/start/, (msg) => {
 
         User.findOneAndUpdate(
             { telegramId },
-            { username, name, profilePhoto: photoUrl, lastLogin: new Date() },
+            { username, name, profilePhoto: photoUrl, lastLogin: new Date(), isPremium: false },
             { upsert: true, new: true },
             (err, user) => {
                 if (err) {
                     bot.sendMessage(chatId, 'Error saving user data.');
                 } else {
-                    bot.sendMessage(chatId, `Welcome, ${name}! Start betting now.`);
+                    bot.sendMessage(chatId, `Welcome, ${name}! Start betting now. Use /profile to view your profile, /challenge <amount> to start a challenge, /buy <amount> to buy stars, and /leaderboard to view the leaderboard.`);
                 }
             }
         );
@@ -47,6 +47,7 @@ bot.onText(/\/profile/, (msg) => {
                 Wins: ${user.wins}
                 Losses: ${user.losses}
                 Badges: ${'🏆'.repeat(user.badges)}
+                ${user.isPremium ? 'Premium: ✅' : ''}
             `;
             bot.sendMessage(chatId, profileMessage);
         }

@@ -10,6 +10,7 @@ const UserSchema = new mongoose.Schema({
   wins: { type: Number, default: 0 },
   losses: { type: Number, default: 0 },
   badges: { type: Number, default: 0 },
+  isPremium: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   lastLogin: { type: Date }
 });

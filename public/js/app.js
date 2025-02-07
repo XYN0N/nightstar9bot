@@ -9,6 +9,7 @@ document.getElementById('profile-btn').addEventListener('click', () => {
             document.getElementById('profile-photo').src = user.profilePhoto;
             document.getElementById('profile-name').textContent = user.name;
             document.getElementById('profile-stats').textContent = `Stars: ${user.stars} 🌟, Wins: ${user.wins}, Losses: ${user.losses}`;
+            document.getElementById('premium-status').textContent = user.isPremium ? 'Premium' : '';
             const badges = Math.floor(user.totalWinnings / 100);
             document.getElementById('badge-container').textContent = `Badges: ${'🏆'.repeat(badges)}`;
         })
