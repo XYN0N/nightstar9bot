@@ -50,26 +50,8 @@ a {
   text-decoration: none;
 }
 
-form {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-}
-
-label, input, select {
-  width: 100%;
-  max-width: 300px;
-}
-
-ul {
-  list-style-type: none;
-  padding: 0;
-}
-
-li {
-  background-color: #f1f1f1;
-  margin: 10px 0;
-  padding: 10px;
-  border-radius: 5px;
+.status {
+  margin-top: 20px;
+  color: red;
+  font-size: 1em;
 }
