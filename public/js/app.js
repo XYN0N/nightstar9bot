@@ -1,3 +1,5 @@
+const socket = new WebSocket('ws://localhost:3000');
+
 document.getElementById('profile-btn').addEventListener('click', () => {
     displaySection('profile-section');
     const telegramId = '123456789'; // Replace with dynamic value
@@ -19,18 +21,7 @@ document.getElementById('challenges-btn').addEventListener('click', () => {
 
 document.getElementById('leaderboard-btn').addEventListener('click', () => {
     displaySection('leaderboard-section');
-    fetch('/api/leaderboard')
-        .then(response => response.json())
-        .then(leaderboard => {
-            const list = document.getElementById('leaderboard-list');
-            list.innerHTML = '';
-            leaderboard.forEach(player => {
-                const listItem = document.createElement('li');
-                listItem.textContent = `${player.positionEmoji} ${player.name} - Wins: ${player.wins} 🏆${player.badge}`;
-                list.appendChild(listItem);
-            });
-        })
-        .catch(error => console.error('Error fetching leaderboard:', error));
+    fetchLeaderboard();
 });
 
 document.getElementById('recharge-btn').addEventListener('click', () => {
@@ -41,16 +32,7 @@ document.querySelectorAll('.challenge-btn').forEach(button => {
     button.addEventListener('click', () => {
         const betAmount = parseInt(button.getAttribute('data-bet'));
         const playerId = 'player1'; // Replace with dynamic value
-        fetch('/api/play', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ playerId, betAmount })
-        })
-            .then(response => response.json())
-            .then(result => alert(`${result.winner.name} wins with number ${result.player1Number} vs ${result.player2Number}!`))
-            .catch(error => console.error('Error starting challenge:', error));
+        socket.send(JSON.stringify({ type: 'find-match', playerId, betAmount }));
     });
 });
 
@@ -67,6 +49,32 @@ document.getElementById('buy-stars-btn').addEventListener('click', () => {
         .then(data => alert(data.message))
         .catch(error => console.error('Error buying stars:', error));
 });
+
+socket.onmessage = function(event) {
+    const data = JSON.parse(event.data);
+    if (data.type === 'leaderboard-update') {
+        updateLeaderboard(data.leaderboard);
+    } else if (data.type === 'match-found') {
+        alert(`Match found! ${data.player1.name} vs ${data.player2.name}`);
+    }
+};
+
+function fetchLeaderboard() {
+    fetch('/api/leaderboard')
+        .then(response => response.json())
+        .then(leaderboard => updateLeaderboard(leaderboard))
+        .catch(error => console.error('Error fetching leaderboard:', error));
+}
+
+function updateLeaderboard(leaderboard) {
+    const list = document.getElementById('leaderboard-list');
+    list.innerHTML = '';
+    leaderboard.forEach(player => {
+        const listItem = document.createElement('li');
+        listItem.textContent = `${player.positionEmoji} ${player.name} - Wins: ${player.wins} 🏆${player.badge}`;
+        list.appendChild(listItem);
+    });
+}
 
 function displaySection(sectionId) {
     document.querySelectorAll('.app-section').forEach(section => {
