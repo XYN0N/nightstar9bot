@@ -34,7 +34,14 @@ mongoose.connect(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true })
 
 const redis = require('redis');
 const redisClient = redis.createClient({ url: process.env.REDIS_URL });
-redisClient.connect().catch(console.error);
+
+redisClient.on('error', (err) => {
+  console.error('Redis connection error:', err);
+});
+
+redisClient.on('connect', () => {
+  console.log('Connected to Redis');
+});
 
 // Define Routes
 app.use('/api/profile', profileRoutes);
