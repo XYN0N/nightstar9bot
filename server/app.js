@@ -65,6 +65,9 @@ wss.on('connection', (ws) => {
                 ws.send(JSON.stringify({ type: 'match-found', player1: player, player2: player2 }));
                 opponent.ws.send(JSON.stringify({ type: 'match-found', player1: player, player2: player2 }));
                 matchmakingQueue = matchmakingQueue.filter(p => p.playerId !== data.playerId && p.playerId !== opponent.playerId);
+                
+                // Start game logic
+                startGame(player, player2, data.betAmount);
             } else {
                 matchmakingQueue.push({ ws, playerId: data.playerId, betAmount: data.betAmount });
             }
@@ -109,3 +112,34 @@ changeStream.on('change', (change) => {
         broadcastLeaderboardUpdate();
     }
 });
+
+async function startGame(player1, player2, betAmount) {
+    const player1Number = Math.floor(Math.random() * 100) + 1;
+    const player2Number = Math.floor(Math.random() * 100) + 1;
+
+    const winner = player1Number > player2Number ? player1 : player2;
+    const loser = winner._id.equals(player1._id) ? player2 : player1;
+
+    winner.stars += betAmount;
+    winner.totalWinnings += betAmount;
+    winner.wins += 1;
+    winner.updateBadges();
+    loser.stars -= betAmount;
+    loser.losses += 1;
+
+    await winner.save();
+    await loser.save();
+
+    const gameSession = new GameSession({
+        player1: player1._id,
+        player2: player2._id,
+        betAmount,
+        winner: winner._id,
+        status: 'completed'
+    });
+
+    await gameSession.save();
+
+    bot.sendMessage(winner.telegramId, `Congratulations! You won ${betAmount} stars in a match against ${loser.name}.`);
+    bot.sendMessage(loser.telegramId, `Sorry, you lost ${betAmount} stars in a match against ${winner.name}.`);
+}

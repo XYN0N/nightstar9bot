@@ -10,7 +10,7 @@
 <body>
     <div id="app-container" class="app-container">
         <header class="app-header">
-            <h1>🌟 Star Betting Game 🌟</h1>
+            <h1 id="home-link">🌟 Star Betting Game 🌟</h1>
         </header>
         <nav class="app-nav">
             <button id="profile-btn" class="nav-btn">Profile</button>
@@ -42,12 +42,24 @@
             </section>
             <section id="recharge-section" class="app-section" style="display: none;">
                 <h2>Recharge Stars</h2>
-                <button id="buy-stars-btn" class="recharge-btn">Buy 100 🌟</button>
+                <button data-stars="100" class="recharge-btn">Buy 100 🌟 for €2.29</button>
+                <button data-stars="250" class="recharge-btn">Buy 250 🌟 for €5.79</button>
+                <button data-stars="500" class="recharge-btn">Buy 500 🌟 for €11.59</button>
+                <button data-stars="750" class="recharge-btn">Buy 750 🌟 for €17.48</button>
+                <button data-stars="1000" class="recharge-btn">Buy 1000 🌟 for €22.99</button>
             </section>
         </main>
         <footer class="app-footer">
-            <p>&copy; 2023 Star Betting Game</p>
+            <p>&copy; 2025 Star Betting Game</p>
         </footer>
     </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const homeLink = document.getElementById('home-link');
+            homeLink.addEventListener('click', () => {
+                displaySection('welcome-section');
+            });
+        });
+    </script>
 </body>
 </html>

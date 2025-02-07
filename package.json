@@ -12,7 +12,8 @@
     "morgan": "^1.10.0",
     "cors": "^2.8.5",
     "redis": "^3.1.2",
-    "node-telegram-bot-api": "^0.50.0"
+    "node-telegram-bot-api": "^0.50.0",
+    "ws": "^7.4.6"
   },
   "engines": {
     "node": "14.x"

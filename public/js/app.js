@@ -36,18 +36,21 @@ document.querySelectorAll('.challenge-btn').forEach(button => {
     });
 });
 
-document.getElementById('buy-stars-btn').addEventListener('click', () => {
-    const telegramId = '123456789'; // Replace with dynamic value
-    fetch('/api/shop/buy', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ telegramId, stars: 100 })
-    })
-        .then(response => response.json())
-        .then(data => alert(data.message))
-        .catch(error => console.error('Error buying stars:', error));
+document.querySelectorAll('.recharge-btn').forEach(button => {
+    button.addEventListener('click', () => {
+        const stars = parseInt(button.getAttribute('data-stars'));
+        const telegramId = '123456789'; // Replace with dynamic value
+        fetch('/api/shop/buy', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ telegramId, stars })
+        })
+            .then(response => response.json())
+            .then(data => alert(data.message))
+            .catch(error => console.error('Error buying stars:', error));
+    });
 });
 
 socket.onmessage = function(event) {
@@ -56,6 +59,7 @@ socket.onmessage = function(event) {
         updateLeaderboard(data.leaderboard);
     } else if (data.type === 'match-found') {
         alert(`Match found! ${data.player1.name} vs ${data.player2.name}`);
+        startGame(data.player1, data.player2);
     }
 };
 
@@ -74,6 +78,11 @@ function updateLeaderboard(leaderboard) {
         listItem.textContent = `${player.positionEmoji} ${player.name} - Wins: ${player.wins} 🏆${player.badge}`;
         list.appendChild(listItem);
     });
+}
+
+function startGame(player1, player2) {
+    // Display game UI with player1 and player2 information
+    console.log('Starting game between', player1.name, 'and', player2.name);
 }
 
 function displaySection(sectionId) {

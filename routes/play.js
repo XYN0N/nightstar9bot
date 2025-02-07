@@ -3,13 +3,6 @@ const router = express.Router();
 const User = require('../models/User');
 const GameSession = require('../models/GameSession');
 
-// Helper function to find a random opponent
-const findRandomOpponent = async (currentUserId, betAmount) => {
-  const opponents = await User.find({ _id: { $ne: currentUserId }, stars: { $gte: betAmount } });
-  if (opponents.length === 0) return null;
-  return opponents[Math.floor(Math.random() * opponents.length)];
-};
-
 router.post('/', async (req, res) => {
   const { playerId, betAmount } = req.body;
   try {
@@ -18,7 +11,7 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'Insufficient stars or player not found' });
     }
 
-    const player2 = await findRandomOpponent(player1._id, betAmount);
+    const player2 = await User.findOne({ _id: { $ne: player1._id }, stars: { $gte: betAmount } });
     if (!player2) {
       return res.status(404).json({ message: 'No available opponents' });
     }
