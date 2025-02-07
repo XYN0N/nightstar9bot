@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Star Betting Mini-App</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script defer src="js/app.js"></script>
+</head>
+<body>
+    <div id="app-container" class="app-container">
+        <header class="app-header">
+            <h1>🌟 Star Betting Game 🌟</h1>
+        </header>
+        <nav class="app-nav">
+            <button id="profile-btn" class="nav-btn">Profile</button>
+            <button id="challenges-btn" class="nav-btn">Challenges</button>
+            <button id="leaderboard-btn" class="nav-btn">Leaderboard</button>
+            <button id="recharge-btn" class="nav-btn">Recharge</button>
+        </nav>
+        <main class="app-main">
+            <section id="welcome-section" class="app-section">
+                <h2>Welcome to Star Betting!</h2>
+                <p>Bet your stars and win big in the 1v1 challenges!</p>
+            </section>
+            <section id="profile-section" class="app-section" style="display: none;">
+                <img id="profile-photo" src="" alt="Profile Photo" class="telegram-icon">
+                <h2 id="profile-name"></h2>
+                <p id="profile-stats"></p>
+                <div id="badge-container"></div>
+            </section>
+            <section id="challenges-section" class="app-section" style="display: none;">
+                <h2>1v1 Challenges</h2>
+                <p>Select a bet amount and find an opponent!</p>
+                <button data-bet="15" class="challenge-btn">Bet 15 🌟</button>
+                <button data-bet="50" class="challenge-btn">Bet 50 🌟</button>
+                <button data-bet="100" class="challenge-btn">Bet 100 🌟</button>
+            </section>
+            <section id="leaderboard-section" class="app-section" style="display: none;">
+                <h2>Leaderboard</h2>
+                <ul id="leaderboard-list"></ul>
+            </section>
+            <section id="recharge-section" class="app-section" style="display: none;">
+                <h2>Recharge Stars</h2>
+                <button id="buy-stars-btn" class="recharge-btn">Buy 100 🌟</button>
+            </section>
+        </main>
+        <footer class="app-footer">
+            <p>&copy; 2023 Star Betting Game</p>
+        </footer>
+    </div>
+</body>
+</html>

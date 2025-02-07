@@ -1,1 +1,0 @@
-// Content for components/Challenge.tsx
