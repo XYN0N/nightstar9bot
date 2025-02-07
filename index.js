@@ -8,6 +8,7 @@ const RedisStore = require('connect-redis')(session);
 const bodyParser = require('body-parser');
 const TelegramBot = require('node-telegram-bot-api');
 const { google } = require('googleapis');
+const path = require('path');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -44,7 +45,9 @@ app.use(session({
 // Middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, 'public')));
 app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
 
 // Inizializzazione del bot Telegram
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
@@ -52,7 +55,14 @@ bot.on('polling_error', (error) => console.log(error));
 
 // Rotte
 app.get('/', (req, res) => {
-  res.send('Benvenuto alla pagina principale!');
+  res.render('index', { telegramBotToken: process.env.TELEGRAM_BOT_TOKEN });
+});
+
+app.get('/home', (req, res) => {
+  if (!req.session.userId) {
+    return res.redirect('/');
+  }
+  res.render('home');
 });
 
 require('./routes/profile')(app, bot);
