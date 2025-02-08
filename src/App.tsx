@@ -64,7 +64,11 @@ function TelegramAuthCheck({ children }: { children: React.ReactNode }) {
       } catch (e: any) {
         console.error('Error initializing app:', e);
         const errorMessage = e.response?.data?.error || e.message || 'Unable to initialize app';
-        setError(errorMessage);
+        const botUsername = e.response?.data?.botUsername || 'starnight9bot';
+        setError(`${errorMessage}`);
+        if (errorMessage.includes('start the bot')) {
+          window.location.href = `https://t.me/${botUsername}?start=webapp`;
+        }
         setIsLoading(false);
       }
     };
@@ -89,25 +93,14 @@ function TelegramAuthCheck({ children }: { children: React.ReactNode }) {
         <div className="text-center p-8">
           <h1 className="text-4xl font-bold mb-4">⭐️ StarNight</h1>
           <p className="text-xl mb-6">{error}</p>
-          {error.includes('start the bot') ? (
-            <a 
-              href={`https://t.me/${process.env.BOT_USERNAME}?start=webapp`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-6 py-3 bg-blue-500 rounded-lg font-semibold hover:bg-blue-600 transition-colors inline-flex items-center gap-2"
-            >
-              Start Bot
-            </a>
-          ) : (
-            <a 
-              href={`https://t.me/${process.env.BOT_USERNAME}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-6 py-3 bg-blue-500 rounded-lg font-semibold hover:bg-blue-600 transition-colors inline-flex items-center gap-2"
-            >
-              Open in Telegram
-            </a>
-          )}
+          <a 
+            href={`https://t.me/starnight9bot`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-6 py-3 bg-blue-500 rounded-lg font-semibold hover:bg-blue-600 transition-colors inline-flex items-center gap-2"
+          >
+            Open in Telegram
+          </a>
         </div>
       </div>
     );
