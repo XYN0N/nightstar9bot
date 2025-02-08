@@ -1,11 +1,9 @@
-import React from 'react';
 import { Star, Gift } from 'lucide-react';
 import { useMutation, useQueryClient } from 'react-query';
 import axios from 'axios';
 import { User } from '../types';
 
 function Recharge() {
-  const [clickCount, setClickCount] = React.useState(0);
   const queryClient = useQueryClient();
   const userData = queryClient.getQueryData<User>('userData');
 
@@ -21,20 +19,9 @@ function Recharge() {
     }
   );
 
-  const handleStarClick = () => {
-    setClickCount(prev => {
-      const newCount = prev + 1;
-      if (newCount >= 10) {
-        earnStarsMutation.mutate();
-        return 0;
-      }
-      return newCount;
-    });
-  };
-
   const handleCopyReferralLink = () => {
-    if (userData?.id) {
-      const referralLink = `https://t.me/nightstar9/app?startapp=refUser_${userData.id}`;
+    if (userData?.referralCode) {
+      const referralLink = `https://t.me/nightstar9/app?startapp=ref_${userData.referralCode}`;
       navigator.clipboard.writeText(referralLink);
     }
   };
@@ -43,21 +30,19 @@ function Recharge() {
     <div className="space-y-6">
       <div className="text-center">
         <h1 className="text-3xl font-bold mb-2">Earn Stars</h1>
-        <p className="text-gray-300">Click to earn stars!</p>
+        <p className="text-gray-300">Complete tasks to earn stars!</p>
       </div>
 
       <div className="grid gap-4">
         <button
-          onClick={handleStarClick}
-          className="p-8 bg-white/10 rounded-xl hover:bg-white/20 transition-colors relative overflow-hidden"
+          onClick={() => earnStarsMutation.mutate()}
+          className="p-8 bg-white/10 rounded-xl hover:bg-white/20 transition-colors"
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/20 to-transparent" 
-               style={{ width: `${(clickCount / 10) * 100}%` }} />
-          <div className="relative flex flex-col items-center gap-3">
+          <div className="flex flex-col items-center gap-3">
             <Star className="w-16 h-16 text-yellow-400 animate-pulse" />
             <div className="text-center">
-              <p className="text-lg font-semibold">Click to Earn Stars</p>
-              <p className="text-sm text-gray-300">{10 - clickCount} clicks until next star</p>
+              <p className="text-lg font-semibold">Daily Reward</p>
+              <p className="text-sm text-gray-300">Click to claim your daily stars</p>
             </div>
           </div>
         </button>
