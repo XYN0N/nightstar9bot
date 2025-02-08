@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
@@ -10,37 +10,7 @@ import Leaderboard from './pages/Leaderboard';
 import AdminPanel from './pages/AdminPanel';
 import Layout from './components/Layout';
 import axios from 'axios';
-
-declare global {
-  interface Window {
-    Telegram?: {
-      WebApp: {
-        ready: () => void;
-        initData: string;
-        initDataUnsafe: {
-          user?: {
-            id: number;
-            first_name: string;
-            last_name?: string;
-            username?: string;
-            language_code?: string;
-          };
-          auth_date?: number;
-          hash?: string;
-        };
-        showAlert?: (message: string) => void;
-        showConfirm?: (message: string) => Promise<boolean>;
-        MainButton?: {
-          show: () => void;
-          hide: () => void;
-          setText: (text: string) => void;
-        };
-        expand: () => void;
-        close: () => void;
-      };
-    };
-  }
-}
+import { WebApp } from '@twa-dev/sdk';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -52,42 +22,25 @@ const queryClient = new QueryClient({
   }
 });
 
-function App() {
+function AuthenticatedApp() {
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [isTelegram, setIsTelegram] = React.useState(false);
 
   React.useEffect(() => {
     const initializeApp = async () => {
       try {
-        // Check if we're in Telegram
-        const twa = window.Telegram?.WebApp;
-        if (!twa) {
-          setIsTelegram(false);
-          setIsLoading(false);
-          return;
-        }
-
         // Initialize Telegram WebApp
-        try {
-          twa.ready();
-          twa.expand(); // Expand the WebApp to full height
-        } catch (e) {
-          console.error('Error initializing Telegram WebApp:', e);
-        }
-
-        // Verify we have user data
-        if (!twa.initDataUnsafe.user) {
-          throw new Error('No user data available. Please open this app through Telegram.');
-        }
-
-        setIsTelegram(true);
+        WebApp.ready();
+        WebApp.expand();
 
         // Set up axios interceptor for Telegram data
         axios.interceptors.request.use((config) => {
           if (config.headers) {
-            config.headers['X-Telegram-Init-Data'] = twa.initData;
-            config.headers['X-Telegram-User'] = JSON.stringify(twa.initDataUnsafe.user);
+            config.headers['X-Telegram-Init-Data'] = WebApp.initData;
+            if (WebApp.initDataUnsafe.user) {
+              config.headers['X-Telegram-User'] = JSON.stringify(WebApp.initDataUnsafe.user);
+            }
           }
           return config;
         });
@@ -98,6 +51,7 @@ function App() {
           if (sessionResponse.data) {
             queryClient.setQueryData('userData', sessionResponse.data);
             setIsLoading(false);
+            navigate('/home');
             return;
           }
         } catch (e) {
@@ -105,33 +59,27 @@ function App() {
         }
 
         // Initialize new session
-        try {
-          const response = await axios.post('/api/auth/initialize');
-          if (!response.data) {
-            throw new Error('Failed to initialize user profile');
-          }
-
-          // Store user data
-          queryClient.setQueryData('userData', response.data);
-          setIsLoading(false);
-        } catch (e: any) {
-          console.error('Error initializing user session:', e);
-          if (e.response?.status === 401) {
-            throw new Error('Please open this app through Telegram.');
-          }
-          throw new Error(e.response?.data?.error || 'Failed to initialize user profile');
+        const response = await axios.post('/api/auth/initialize');
+        if (!response.data) {
+          throw new Error('Failed to initialize user profile');
         }
+
+        // Store user data and redirect to home
+        queryClient.setQueryData('userData', response.data);
+        setIsLoading(false);
+        navigate('/home');
       } catch (e: any) {
         console.error('Error initializing app:', e);
-        setError(e.message || 'Unable to initialize app. Please try again.');
+        const errorMessage = e.response?.data?.error || e.message || 'Unable to initialize app';
+        setError(errorMessage);
         setIsLoading(false);
       }
     };
 
     initializeApp();
-  }, []);
+  }, [navigate]);
 
-  if (!isTelegram) {
+  if (!WebApp.initDataUnsafe.user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 to-purple-900 text-white flex items-center justify-center">
         <div className="text-center p-8">
@@ -167,32 +115,50 @@ function App() {
         <div className="text-center p-8">
           <h1 className="text-4xl font-bold mb-4">⭐️ Error</h1>
           <p className="text-xl mb-6">{error}</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="px-6 py-3 bg-blue-500 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
-          >
-            Try Again
-          </button>
+          {error.includes('start the bot') ? (
+            <a 
+              href="https://t.me/starnight9bot?start=webapp"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-6 py-3 bg-blue-500 rounded-lg font-semibold hover:bg-blue-600 transition-colors inline-flex items-center gap-2"
+            >
+              Start Bot
+            </a>
+          ) : (
+            <button 
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 bg-blue-500 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
+            >
+              Try Again
+            </button>
+          )}
         </div>
       </div>
     );
   }
 
   return (
+    <Routes>
+      <Route path="/" element={<Layout />}>
+        <Route index element={<Navigate to="/home" replace />} />
+        <Route path="home" element={<Home />} />
+        <Route path="profile" element={<Profile />} />
+        <Route path="challenges" element={<Challenges />} />
+        <Route path="game/:gameId" element={<Game />} />
+        <Route path="recharge" element={<Recharge />} />
+        <Route path="leaderboard" element={<Leaderboard />} />
+        <Route path="admin" element={<AdminPanel />} />
+        <Route path="*" element={<Navigate to="/home" replace />} />
+      </Route>
+    </Routes>
+  );
+}
+
+function App() {
+  return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Home />} />
-            <Route path="profile" element={<Profile />} />
-            <Route path="challenges" element={<Challenges />} />
-            <Route path="game/:gameId" element={<Game />} />
-            <Route path="recharge" element={<Recharge />} />
-            <Route path="leaderboard" element={<Leaderboard />} />
-            <Route path="admin" element={<AdminPanel />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-        </Routes>
+        <AuthenticatedApp />
       </BrowserRouter>
     </QueryClientProvider>
   );

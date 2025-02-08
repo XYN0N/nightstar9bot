@@ -70,7 +70,7 @@ async function getUserProfilePhoto(userId: number): Promise<string> {
 // Helper function to check if user has started the bot
 async function hasUserStartedBot(userId: number): Promise<boolean> {
   try {
-    const chatMember = await bot.api.getChatMember('@starnight9bot', userId);
+    const chatMember = await bot.api.getChatMember(userId, userId);
     return chatMember.status !== 'left' && chatMember.status !== 'kicked';
   } catch (error) {
     return false;
@@ -130,7 +130,7 @@ app.post('/api/auth/initialize', verifyTelegramWebAppData, async (req, res) => {
     if (!hasStarted) {
       return res.status(401).json({ 
         error: 'Please start the bot first by clicking the button below',
-        botUsername: '@starnight9bot'
+        botUsername: process.env.BOT_USERNAME
       });
     }
 
@@ -208,7 +208,7 @@ app.get('/api/auth/session', verifyTelegramWebAppData, async (req, res) => {
     if (!session) {
       return res.status(401).json({ 
         error: 'Please start the bot first',
-        botUsername: '@starnight9bot'
+        botUsername: process.env.BOT_USERNAME
       });
     }
 
@@ -270,15 +270,16 @@ bot.command("start", async (ctx) => {
       { upsert: true, new: true }
     );
 
-    // IMPORTANT: The web app URL must be a valid HTTPS URL
-    const webAppUrl = 'https://nightstar9bot-d607ada78002.herokuapp.com';
-    
+    // Send welcome message with web app button
     await ctx.reply(
-      'Welcome to StarNight! 🌟\n\nClick the button below to start playing!',
+      'Welcome to StarNight! 🌟\n\nYour account has been created with 100 stars to start playing!\n\nClick the button below to start playing!',
       {
         reply_markup: {
           inline_keyboard: [[
-            { text: '🎮 Play Now', web_app: { url: webAppUrl } }
+            { 
+              text: '🎮 Play Now', 
+              web_app: { url: process.env.APP_URL || 'https://nightstar9bot-d607ada78002.herokuapp.com' } 
+            }
           ]]
         }
       }

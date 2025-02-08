@@ -2,33 +2,29 @@ import { Room, Client } from "@colyseus/core";
 import { Schema, type, MapSchema } from "@colyseus/schema";
 
 class PlayerState extends Schema {
-  @type("string") id: string;
-  @type("string") username: string;
-  @type("number") stars: number;
-  @type("boolean") ready: boolean;
+  @type("string") id = "";
+  @type("string") username = "";
+  @type("number") stars = 0;
+  @type("boolean") ready = false;
 
-  constructor() {
+  constructor(id: string, username: string, stars: number) {
     super();
-    this.id = "";
-    this.username = "";
-    this.stars = 0;
+    this.id = id;
+    this.username = username;
+    this.stars = stars;
     this.ready = false;
   }
 }
 
 class GameState extends Schema {
-  @type("string") status: string;
-  @type("number") betAmount: number;
+  @type("string") status = "waiting";
+  @type("number") betAmount = 0;
   @type({ map: PlayerState }) players = new MapSchema<PlayerState>();
-  @type("string") winner: string;
-  @type("string") coinSide: string;
+  @type("string") winner = "";
+  @type("string") coinSide = "heads";
 
   constructor() {
     super();
-    this.status = "waiting";
-    this.betAmount = 0;
-    this.winner = "";
-    this.coinSide = "heads";
   }
 }
 
@@ -36,9 +32,8 @@ export class GameRoom extends Room<GameState> {
   maxClients = 2;
 
   onCreate(options: { betAmount: number }) {
-    const state = new GameState();
-    state.betAmount = options.betAmount;
-    this.setState(state);
+    this.setState(new GameState());
+    this.state.betAmount = options.betAmount;
 
     this.onMessage("ready", (client) => {
       const player = this.state.players.get(client.sessionId);
@@ -59,10 +54,11 @@ export class GameRoom extends Room<GameState> {
   }
 
   onJoin(client: Client, options: { username: string; stars: number }) {
-    const player = new PlayerState();
-    player.id = client.sessionId;
-    player.username = options.username;
-    player.stars = options.stars;
+    const player = new PlayerState(
+      client.sessionId,
+      options.username,
+      options.stars
+    );
     
     this.state.players.set(client.sessionId, player);
 
