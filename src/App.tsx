@@ -68,8 +68,6 @@ function App() {
           return;
         }
 
-        setIsTelegram(true);
-        
         // Initialize Telegram WebApp
         try {
           twa.ready();
@@ -82,7 +80,9 @@ function App() {
         if (!twa.initDataUnsafe.user) {
           throw new Error('No user data available. Please open this app through Telegram.');
         }
-        
+
+        setIsTelegram(true);
+
         // Set up axios interceptor for Telegram data
         axios.interceptors.request.use((config) => {
           if (config.headers) {
@@ -186,4 +186,4 @@ function App() {
   );
 }
 
-export default App
+export default App;
