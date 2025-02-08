@@ -1,18 +1,10 @@
 import { io } from 'socket.io-client';
 
-// Get the WebSocket URL based on environment
-const getWebSocketURL = () => {
-  if (import.meta.env.PROD) {
-    return window.location.origin;
-  }
-  return 'http://localhost:3000';
-};
-
-const socket = io(getWebSocketURL(), {
+// In production, use the same origin (Heroku URL)
+const socket = io('/', {
   transports: ['websocket'],
   autoConnect: true,
-  path: '/socket.io',
-  withCredentials: true
+  path: '/socket.io'
 });
 
 // Add connection event handlers

@@ -1,16 +1,10 @@
 import axios from 'axios';
 import { User, LeaderboardEntry } from '../types';
 
-// Get the API URL based on environment
-const getAPIURL = () => {
-  if (import.meta.env.PROD) {
-    return window.location.origin;
-  }
-  return 'http://localhost:3000';
-};
-
+// Create axios instance with base configuration
 const api = axios.create({
-  baseURL: getAPIURL(),
+  // In production, use the same origin (Heroku URL)
+  baseURL: '/',
   withCredentials: true
 });
 

@@ -2,15 +2,9 @@ import axios from 'axios';
 import { Game } from '../types';
 
 // Get the API URL based on environment
-const getAPIURL = () => {
-  if (import.meta.env.PROD) {
-    return window.location.origin;
-  }
-  return 'http://localhost:3000';
-};
-
 const api = axios.create({
-  baseURL: getAPIURL(),
+  // In production, use the same origin (Heroku URL)
+  baseURL: '/',
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json'
