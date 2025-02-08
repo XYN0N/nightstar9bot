@@ -1,7 +1,10 @@
 import axios from 'axios';
 import { Game } from '../types';
 
-const API_URL = import.meta.env.VITE_API_URL || '';
+// Use the production URL or fallback to development
+const API_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://nightstar9bot-d607ada78002.herokuapp.com'
+  : 'http://localhost:3000';
 
 const api = axios.create({
   baseURL: API_URL,
