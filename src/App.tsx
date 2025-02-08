@@ -92,7 +92,19 @@ function App() {
           return config;
         });
 
-        // Initialize user session
+        // Check existing session first
+        try {
+          const sessionResponse = await axios.get('/api/auth/session');
+          if (sessionResponse.data) {
+            queryClient.setQueryData('userData', sessionResponse.data);
+            setIsLoading(false);
+            return;
+          }
+        } catch (e) {
+          console.log('No existing session, creating new one...');
+        }
+
+        // Initialize new session
         try {
           const response = await axios.post('/api/auth/initialize');
           if (!response.data) {

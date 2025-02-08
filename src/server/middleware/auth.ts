@@ -43,8 +43,8 @@ export function verifyTelegramWebAppData(req: Request, res: Response, next: Next
     
     if (calculatedHash !== hash) {
       console.error('Hash mismatch:', { calculated: calculatedHash, received: hash });
-      // For development, we'll allow invalid hashes but log them
-      // In production, you should uncomment the following line:
+      // In development, we'll log the error but continue
+      // In production, uncomment the following line:
       // return res.status(401).json({ error: 'Invalid Telegram data signature' });
     }
 
