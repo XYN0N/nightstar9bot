@@ -9,7 +9,9 @@
     "strict": true,
     "skipLibCheck": true,
     "types": ["node"],
-    "allowJs": true
+    "allowJs": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
   },
   "include": ["src/server/**/*", "src/config/**/*", "src/types/**/*"],
   "exclude": ["node_modules", "dist"]

@@ -1,11 +1,18 @@
 import { Room, Client } from "@colyseus/core";
 import { Schema, type, MapSchema } from "@colyseus/schema";
 
-class PlayerState extends Schema {
-  @type("string") id!: string;
-  @type("string") username!: string;
-  @type("number") stars!: number;
-  @type("boolean") ready: boolean = false;
+export class PlayerState extends Schema {
+  @type("string")
+  id = "";
+
+  @type("string")
+  username = "";
+
+  @type("number")
+  stars = 0;
+
+  @type("boolean")
+  ready = false;
 
   constructor(id: string, username: string, stars: number) {
     super();
@@ -15,19 +22,21 @@ class PlayerState extends Schema {
   }
 }
 
-class GameState extends Schema {
-  @type("string") status: "waiting" | "playing" | "finished" = "waiting";
-  @type("number") betAmount!: number;
-  @type({ map: PlayerState }) players = new MapSchema<PlayerState>();
-  @type("string") winner!: string;
-  @type("string") coinSide!: "heads" | "tails";
+export class GameState extends Schema {
+  @type("string")
+  status = "waiting";
 
-  constructor() {
-    super();
-    this.betAmount = 0;
-    this.winner = "";
-    this.coinSide = "heads";
-  }
+  @type("number")
+  betAmount = 0;
+
+  @type({ map: PlayerState })
+  players = new MapSchema<PlayerState>();
+
+  @type("string")
+  winner = "";
+
+  @type("string")
+  coinSide = "heads";
 }
 
 export class GameRoom extends Room<GameState> {
