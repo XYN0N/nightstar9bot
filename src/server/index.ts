@@ -25,13 +25,13 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Calculate the correct dist path - this should point to where Vite builds the client
+// Calculate the correct dist path
 const distPath = path.join(process.cwd(), 'dist');
 
 const app = express();
 const httpServer = createServer(app);
 
-// Initialize Redis with retry strategy
+// Initialize Redis
 const redis = new Redis(REDIS_URL, {
   retryStrategy(times) {
     const delay = Math.min(times * 50, 2000);
@@ -39,7 +39,7 @@ const redis = new Redis(REDIS_URL, {
   }
 });
 
-// Connect to MongoDB with retries and options
+// Connect to MongoDB
 const connectWithRetry = () => {
   mongoose.connect(MONGODB_URL, {
     serverSelectionTimeoutMS: 5000,
@@ -58,7 +58,7 @@ const connectWithRetry = () => {
 
 connectWithRetry();
 
-// Initialize Telegram bot with grammY
+// Initialize Telegram bot
 const bot = new Bot(TELEGRAM_BOT_TOKEN);
 
 // Initialize Colyseus
@@ -74,186 +74,14 @@ gameServer.define("game", GameRoom);
 // Middleware
 app.use(express.json());
 
-// Function to validate Telegram WebApp data
-function validateTelegramWebAppData(initData: string): boolean {
-  try {
-    const urlParams = new URLSearchParams(initData);
-    const hash = urlParams.get('hash');
-    if (!hash) return false;
-    
-    urlParams.delete('hash');
-    
-    const params = Array.from(urlParams.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, value]) => `${key}=${value}`)
-      .join('\n');
-    
-    const secret = crypto.createHmac('sha256', 'WebAppData')
-      .update(TELEGRAM_BOT_TOKEN)
-      .digest();
-    
-    const calculatedHash = crypto.createHmac('sha256', secret)
-      .update(params)
-      .digest('hex');
-    
-    return calculatedHash === hash;
-  } catch (error) {
-    console.error('Error validating Telegram data:', error);
-    return false;
-  }
-}
-
-// Middleware to verify and parse Telegram WebApp data
-const verifyTelegramWebAppData = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  const initData = req.headers['x-telegram-init-data'] as string;
-  const userData = req.headers['x-telegram-user'];
-  
-  if (!initData || !userData) {
-    return res.status(401).json({ error: 'Please open this app through Telegram' });
-  }
-
-  try {
-    if (!validateTelegramWebAppData(initData)) {
-      return res.status(401).json({ error: 'Invalid Telegram data' });
-    }
-
-    const user = JSON.parse(userData as string);
-    if (!user || !user.id) {
-      return res.status(401).json({ error: 'Invalid user data' });
-    }
-
-    req.telegramUser = user;
-    next();
-  } catch (error) {
-    console.error('Error verifying Telegram data:', error);
-    res.status(401).json({ error: 'Invalid Telegram data format' });
-  }
-};
-
-// API Routes
-app.post('/api/auth/initialize', verifyTelegramWebAppData, async (req: express.Request, res: express.Response) => {
-  try {
-    const telegramUser = req.telegramUser;
-    if (!telegramUser) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    // Get user profile photo
-    let photoUrl = '';
-    try {
-      const userInfo = await bot.api.getUserProfilePhotos(telegramUser.id);
-      if (userInfo.photos.length > 0) {
-        const file = await bot.api.getFile(userInfo.photos[0][0].file_id);
-        photoUrl = `https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${file.file_path}`;
-      }
-    } catch (error) {
-      console.error('Error getting profile photo:', error);
-    }
-
-    // Create or update user
-    const userData = {
-      telegramId: telegramUser.id,
-      username: telegramUser.username || telegramUser.first_name || 'Anonymous',
-      firstName: telegramUser.first_name,
-      lastName: telegramUser.last_name,
-      languageCode: telegramUser.language_code,
-      photoUrl,
-      lastActive: new Date()
-    };
-
-    const user = await User.findOneAndUpdate(
-      { telegramId: telegramUser.id },
-      { 
-        $set: userData,
-        $setOnInsert: { stars: 100 }
-      },
-      { upsert: true, new: true }
-    );
-
-    // Store session in Redis
-    const sessionKey = `session:${telegramUser.id}`;
-    await redis.set(sessionKey, JSON.stringify(user), 'EX', 86400);
-
-    res.json(user);
-  } catch (error) {
-    console.error('Error initializing user:', error);
-    res.status(500).json({ error: 'Failed to initialize user' });
-  }
-});
-
-// Game routes
-app.post('/api/game/find-match', verifyTelegramWebAppData, async (req, res) => {
-  try {
-    const { betAmount } = req.body;
-    const telegramUser = req.telegramUser;
-
-    if (!telegramUser) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const waitingGame = await Game.findOne({
-      status: 'waiting',
-      betAmount,
-      player2: null
-    });
-
-    if (waitingGame) {
-      waitingGame.player2 = telegramUser.id;
-      waitingGame.status = 'playing';
-      await waitingGame.save();
-      return res.json(waitingGame);
-    }
-
-    const newGame = new Game({
-      player1: telegramUser.id,
-      betAmount,
-      status: 'waiting'
-    });
-    await newGame.save();
-
-    res.json(newGame);
-  } catch (error) {
-    console.error('Error finding match:', error);
-    res.status(500).json({ error: 'Failed to find match' });
-  }
-});
-
 // Serve static files
 app.use(express.static(distPath));
 
 // Colyseus monitor
 app.use('/colyseus', monitor());
 
-// Catch-all route for SPA
-app.get('*', (req, res) => {
-  // Ensure index.html exists
-  const indexPath = path.join(distPath, 'index.html');
-  if (!fs.existsSync(indexPath)) {
-    console.error('Error: index.html not found in', distPath);
-    return res.status(404).json({ error: 'Application not properly built' });
-  }
-  res.sendFile(indexPath);
-});
-
-// Bot commands
-bot.command("start", async (ctx) => {
-  try {
-    const webAppUrl = process.env.APP_URL || 'https://t.me/starnight9bot/app';
-    await ctx.reply('Welcome to StarNight! 🌟\n\nClick the button below to start playing!', {
-      reply_markup: {
-        inline_keyboard: [[
-          {
-            text: '🎮 Play Now',
-            web_app: { url: webAppUrl }
-          }
-        ]]
-      }
-    });
-  } catch (error) {
-    console.error('Error in start command:', error);
-    await ctx.reply('Sorry, there was an error. Please try again later.');
-  }
-});
+// API Routes
+app.use('/api/*', verifyTelegramWebAppData);
 
 // Start bot
 bot.start().catch(err => {

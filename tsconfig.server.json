@@ -11,7 +11,7 @@
     "allowJs": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "useDefineForClassFields": true,
+    "useDefineForClassFields": false,
     "typeRoots": ["./node_modules/@types", "./src/server/types"]
   },
   "include": ["src/server/**/*", "src/config/**/*", "src/types/**/*"],
