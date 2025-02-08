@@ -1,7 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
-import { WebApp } from '@twa-dev/sdk';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
 import Challenges from './pages/Challenges';
@@ -23,18 +22,18 @@ function App() {
     const initializeApp = async () => {
       try {
         // Check if we're in Telegram
-        const isTelegramWebApp = window.Telegram?.WebApp || false;
-        setIsTelegram(!!isTelegramWebApp);
-
-        if (!isTelegramWebApp) {
+        const twa = window.Telegram?.WebApp;
+        if (!twa) {
           throw new Error('This app is only available through Telegram.');
         }
 
+        setIsTelegram(true);
+
         // Initialize Telegram WebApp
-        WebApp.ready();
+        twa.ready();
         
         // Get initData
-        const initData = WebApp.initData;
+        const initData = twa.initData;
         if (!initData) {
           throw new Error('No Telegram data available. Please open this app through Telegram.');
         }
