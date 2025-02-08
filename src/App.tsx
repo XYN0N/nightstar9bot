@@ -26,19 +26,28 @@ function AuthenticatedApp() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [isTelegramWebApp, setIsTelegramWebApp] = React.useState(false);
 
   React.useEffect(() => {
     const initializeApp = async () => {
       try {
+        // Check if we're in Telegram WebApp
+        if (!WebApp) {
+          setError('Please open this app through Telegram');
+          setIsLoading(false);
+          return;
+        }
+
         // Initialize Telegram WebApp
         WebApp.ready();
         WebApp.expand();
+        setIsTelegramWebApp(true);
 
         // Set up axios interceptor for Telegram data
         axios.interceptors.request.use((config) => {
           if (config.headers) {
             config.headers['X-Telegram-Init-Data'] = WebApp.initData;
-            if (WebApp.initDataUnsafe.user) {
+            if (WebApp.initDataUnsafe?.user) {
               config.headers['X-Telegram-User'] = JSON.stringify(WebApp.initDataUnsafe.user);
             }
           }
@@ -79,7 +88,7 @@ function AuthenticatedApp() {
     initializeApp();
   }, [navigate]);
 
-  if (!WebApp.initDataUnsafe.user) {
+  if (!isTelegramWebApp) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 to-purple-900 text-white flex items-center justify-center">
         <div className="text-center p-8">
