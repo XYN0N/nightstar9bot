@@ -41,9 +41,9 @@ export default function Recharge() {
   );
 
   const handleCopyReferralLink = async () => {
-    if (userData?.referralCode) {
+    if (user?.referralCode) {
       try {
-        const referralLink = `https://t.me/starnight9bot?start=ref_${userData.referralCode}`;
+        const referralLink = `https://t.me/starnight9bot?start=ref_${user.referralCode}`;
         await navigator.clipboard.writeText(referralLink);
         WebApp.showPopup({
           title: 'Success!',
