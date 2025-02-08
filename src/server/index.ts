@@ -17,12 +17,16 @@ import { REDIS_URL, MONGODB_URL } from '../config/database.js';
 import { User } from './models/User.js';
 import { Game } from './models/Game.js';
 import crypto from 'crypto';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Important: Calculate the correct dist path
-const distPath = path.join(__dirname, '../../../dist');
+const distPath = path.join(__dirname, '../../dist');
 
 const app = express();
 const httpServer = createServer(app);
@@ -129,9 +133,6 @@ const verifyTelegramWebAppData = (req: express.Request, res: express.Response, n
     res.status(401).json({ error: 'Invalid Telegram data format' });
   }
 };
-
-// Apply middleware to protected routes
-app.use('/api/*', verifyTelegramWebAppData);
 
 // API Routes
 app.post('/api/auth/initialize', async (req: express.Request, res: express.Response) => {
@@ -285,23 +286,13 @@ app.use(express.static(distPath));
 
 // 4. Catch-all route - MUST be last
 app.get('*', (req, res) => {
-  // Log the requested path and the file we're trying to send
-  console.log('Requested path:', req.path);
-  console.log('Sending file:', path.join(distPath, 'index.html'));
-  
-  // Check if the file exists before sending
-  if (!fs.existsSync(path.join(distPath, 'index.html'))) {
-    console.error('Error: index.html not found in', distPath);
-    return res.status(404).send('File not found');
-  }
-  
   res.sendFile(path.join(distPath, 'index.html'));
 });
 
 // Bot commands
 bot.command("start", async (ctx) => {
   try {
-    const webAppUrl = process.env.APP_URL || 'https://nightstar9bot-d607ada78002.herokuapp.com/';
+    const webAppUrl = process.env.APP_URL || 'https://t.me/starnight9bot/app';
     await ctx.reply('Welcome to StarNight! 🌟\n\nClick the button below to start playing!', {
       reply_markup: {
         inline_keyboard: [[
@@ -327,6 +318,4 @@ bot.start().catch(err => {
 const port = Number(process.env.PORT) || 3000;
 httpServer.listen(port, () => {
   console.log(`Server running on port ${port}`);
-  // Log the dist path for debugging
-  console.log('Serving static files from:', distPath);
 });

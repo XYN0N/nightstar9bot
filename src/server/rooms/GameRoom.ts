@@ -2,13 +2,20 @@ import { Room, Client } from "@colyseus/core";
 import { Schema, type, MapSchema } from "@colyseus/schema";
 
 class PlayerState extends Schema {
-  @type("string") id: string;
-  @type("string") username: string;
-  @type("number") stars: number;
-  @type("boolean") ready: boolean;
+  @type("string") id!: string;
+  @type("string") username!: string;
+  @type("number") stars!: number;
+  @type("boolean") ready!: boolean;
 
-  constructor(id: string, username: string, stars: number) {
+  constructor() {
     super();
+    this.id = "";
+    this.username = "";
+    this.stars = 0;
+    this.ready = false;
+  }
+
+  initialize(id: string, username: string, stars: number) {
     this.id = id;
     this.username = username;
     this.stars = stars;
@@ -17,11 +24,11 @@ class PlayerState extends Schema {
 }
 
 class GameState extends Schema {
-  @type("string") status: string;
-  @type("number") betAmount: number;
+  @type("string") status!: string;
+  @type("number") betAmount!: number;
   @type({ map: PlayerState }) players = new MapSchema<PlayerState>();
-  @type("string") winner: string;
-  @type("string") coinSide: string;
+  @type("string") winner!: string;
+  @type("string") coinSide!: string;
 
   constructor() {
     super();
@@ -59,10 +66,9 @@ export class GameRoom extends Room<GameState> {
   }
 
   onJoin(client: Client, options: { username: string; stars: number }) {
-    this.state.players.set(
-      client.sessionId,
-      new PlayerState(client.sessionId, options.username, options.stars)
-    );
+    const player = new PlayerState();
+    player.initialize(client.sessionId, options.username, options.stars);
+    this.state.players.set(client.sessionId, player);
 
     // If room is full, start the game
     if (this.state.players.size === 2) {
