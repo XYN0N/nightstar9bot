@@ -14,19 +14,12 @@ class PlayerState extends Schema {
     this.stars = 0;
     this.ready = false;
   }
-
-  setup(data: { id: string; username: string; stars: number }) {
-    this.id = data.id;
-    this.username = data.username;
-    this.stars = data.stars;
-    this.ready = false;
-  }
 }
 
 class GameState extends Schema {
   @type("string") status: string;
   @type("number") betAmount: number;
-  @type({ map: PlayerState }) players = new MapSchema<PlayerState>();
+  @type({ map: PlayerState }) players: MapSchema<PlayerState>;
   @type("string") winner: string;
   @type("string") coinSide: string;
 
@@ -34,6 +27,7 @@ class GameState extends Schema {
     super();
     this.status = "waiting";
     this.betAmount = 0;
+    this.players = new MapSchema<PlayerState>();
     this.winner = "";
     this.coinSide = "heads";
   }
@@ -66,11 +60,9 @@ export class GameRoom extends Room<GameState> {
 
   onJoin(client: Client, options: { username: string; stars: number }) {
     const player = new PlayerState();
-    player.setup({
-      id: client.sessionId,
-      username: options.username,
-      stars: options.stars
-    });
+    player.id = client.sessionId;
+    player.username = options.username;
+    player.stars = options.stars;
     
     this.state.players.set(client.sessionId, player);
 

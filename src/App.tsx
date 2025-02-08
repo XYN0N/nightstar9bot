@@ -11,27 +11,6 @@ import Leaderboard from './pages/Leaderboard';
 import AdminPanel from './pages/AdminPanel';
 import Layout from './components/Layout';
 
-declare global {
-  interface Window {
-    Telegram?: {
-      WebApp: {
-        ready: () => void;
-        expand: () => void;
-        initData: string;
-        initDataUnsafe: {
-          user?: {
-            id: number;
-            first_name: string;
-            last_name?: string;
-            username?: string;
-            language_code?: string;
-          };
-        };
-      };
-    };
-  }
-}
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -52,18 +31,27 @@ function App() {
       try {
         // Check if we're in Telegram WebApp
         const twa = window.Telegram?.WebApp;
-        if (!twa) {
+        
+        // If we're not in Telegram and not in development, show the Telegram prompt
+        if (!twa && process.env.NODE_ENV !== 'development') {
           setError('Please open this app through Telegram');
           setIsLoading(false);
           return;
         }
 
-        // Initialize WebApp
-        twa.ready();
-        twa.expand();
+        // In development, we can proceed without Telegram
+        if (process.env.NODE_ENV === 'development') {
+          setIsAuthenticated(true);
+          setIsLoading(false);
+          return;
+        }
 
-        // Set headers for all future requests
-        axios.defaults.headers.common['X-Telegram-Init-Data'] = twa.initData;
+        // Set up headers for API requests
+        if (twa) {
+          twa.ready();
+          twa.expand();
+          axios.defaults.headers.common['X-Telegram-Init-Data'] = twa.initData;
+        }
 
         // Initialize user session
         const response = await axios.post('/api/auth/initialize');
@@ -73,17 +61,9 @@ function App() {
         }
 
         setIsLoading(false);
-      } catch (e: any) {
-        console.error('Error initializing app:', e);
-        const errorMessage = e.response?.data?.error || e.message;
-        
-        if (errorMessage.includes('start the bot')) {
-          const botUsername = e.response?.data?.botUsername || 'starnight9bot';
-          window.location.href = `https://t.me/${botUsername}?start=webapp`;
-          return;
-        }
-        
-        setError(errorMessage);
+      } catch (error: any) {
+        console.error('App initialization error:', error);
+        setError(error?.response?.data?.error || error.message || 'Failed to initialize app');
         setIsLoading(false);
       }
     };
@@ -121,7 +101,7 @@ function App() {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated && process.env.NODE_ENV !== 'development') {
     return null;
   }
 
@@ -130,14 +110,14 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Layout />}>
-            <Route index element={<Navigate to="/profile" replace />} />
+            <Route index element={<Home />} />
             <Route path="profile" element={<Profile />} />
             <Route path="challenges" element={<Challenges />} />
             <Route path="game/:gameId" element={<Game />} />
             <Route path="recharge" element={<Recharge />} />
             <Route path="leaderboard" element={<Leaderboard />} />
             <Route path="admin" element={<AdminPanel />} />
-            <Route path="*" element={<Navigate to="/profile" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>
       </BrowserRouter>

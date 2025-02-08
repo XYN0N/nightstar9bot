@@ -1,17 +1,43 @@
 import axios from 'axios';
 import { User, LeaderboardEntry } from '../types';
 
+const API_URL = import.meta.env.VITE_API_URL || '';
+
+const api = axios.create({
+  baseURL: API_URL,
+  withCredentials: true
+});
+
 export async function getUserData(): Promise<User> {
-  const response = await axios.post('/api/auth/initialize');
-  return response.data;
+  try {
+    const response = await api.post('/api/auth/initialize');
+    return response.data;
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      // Return mock data in development
+      return {
+        id: 1,
+        username: 'Test User',
+        photoUrl: '',
+        stars: 100,
+        totalWins: 0,
+        totalLosses: 0,
+        totalEarnings: 0,
+        badges: [],
+        isPremium: false,
+        referralCode: 'TEST123'
+      };
+    }
+    throw error;
+  }
 }
 
 export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
-  const response = await axios.get('/api/leaderboard');
+  const response = await api.get('/api/leaderboard');
   return response.data;
 }
 
 export async function earnStars(type: 'click' | 'referral'): Promise<User> {
-  const response = await axios.post('/api/stars/earn', { type });
+  const response = await api.post('/api/stars/earn', { type });
   return response.data;
 }

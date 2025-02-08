@@ -1,10 +1,9 @@
-import React from 'react';
-import { Settings } from 'lucide-react';
+import { Settings, Users, TowerControl as GameController, TrendingUp } from 'lucide-react';
 import { useQuery } from 'react-query';
 import { getUserData } from '../api/user';
 import { ADMIN_ID } from '../config/telegram';
 
-function AdminPanel() {
+export default function AdminPanel() {
   const { data: user } = useQuery('userData', getUserData);
 
   if (!user || user.id !== ADMIN_ID) {
@@ -24,21 +23,33 @@ function AdminPanel() {
 
       <div className="space-y-4">
         <div className="p-6 bg-white/10 rounded-xl">
-          <h2 className="text-xl font-semibold mb-4">Statistics</h2>
+          <div className="flex items-center gap-3 mb-4">
+            <TrendingUp className="w-6 h-6 text-blue-400" />
+            <h2 className="text-xl font-semibold">Statistics</h2>
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 bg-white/5 rounded-lg">
-              <p className="text-sm text-gray-300">Total Users</p>
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="w-5 h-5 text-gray-400" />
+                <p className="text-sm text-gray-300">Total Users</p>
+              </div>
               <p className="text-2xl font-bold">0</p>
             </div>
             <div className="p-4 bg-white/5 rounded-lg">
-              <p className="text-sm text-gray-300">Games Today</p>
+              <div className="flex items-center gap-2 mb-2">
+                <GameController className="w-5 h-5 text-gray-400" />
+                <p className="text-sm text-gray-300">Games Today</p>
+              </div>
               <p className="text-2xl font-bold">0</p>
             </div>
           </div>
         </div>
 
         <div className="p-6 bg-white/10 rounded-xl">
-          <h2 className="text-xl font-semibold mb-4">Settings</h2>
+          <div className="flex items-center gap-3 mb-4">
+            <Settings className="w-6 h-6 text-purple-400" />
+            <h2 className="text-xl font-semibold">Settings</h2>
+          </div>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -66,5 +77,3 @@ function AdminPanel() {
     </div>
   );
 }
-
-export default AdminPanel;

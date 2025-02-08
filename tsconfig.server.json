@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "ES2020",
-    "moduleResolution": "node",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "esModuleInterop": true,
     "outDir": "dist/server",
     "rootDir": "src",
@@ -11,7 +11,7 @@
     "allowJs": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "useDefineForClassFields": true,
+    "useDefineForClassFields": false,
     "types": ["node"],
     "typeRoots": ["./node_modules/@types", "./src/server/types"]
   },

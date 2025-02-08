@@ -1,25 +1,26 @@
-import React from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getGameStatus } from '../api/game';
 import { useSocket } from '../hooks/useSocket';
+import { Game as GameType } from '../types';
 
 function Game() {
-  const { gameId } = useParams();
+  const { gameId } = useParams<{ gameId: string }>();
   const { data: game } = useQuery(['game', gameId], () => getGameStatus(gameId!), {
     refetchInterval: 1000,
+    enabled: !!gameId
   });
 
   const [flipping, setFlipping] = React.useState(false);
   const [result, setResult] = React.useState<'heads' | 'tails' | null>(null);
 
-  useSocket(gameId, (updatedGame) => {
+  useSocket(gameId, (updatedGame: GameType) => {
     if (updatedGame.status === 'playing') {
       setFlipping(true);
       setTimeout(() => {
         setFlipping(false);
-        setResult(updatedGame.coinSide);
+        setResult(updatedGame.coinSide || null);
       }, 3000);
     }
   });
@@ -46,17 +47,19 @@ function Game() {
           <p className="text-sm text-gray-300">at stake</p>
         </div>
 
-        <div className="text-center">
-          <img
-            src={game.player2.photoUrl}
-            alt={game.player2.username}
-            className="w-16 h-16 rounded-full mx-auto mb-2"
-          />
-          <p className="font-semibold">{game.player2.username}</p>
-          <p className="text-sm text-gray-300">
-            {game.player2.id === game.winner?.id ? 'Winner!' : ''}
-          </p>
-        </div>
+        {game.player2 && (
+          <div className="text-center">
+            <img
+              src={game.player2.photoUrl}
+              alt={game.player2.username}
+              className="w-16 h-16 rounded-full mx-auto mb-2"
+            />
+            <p className="font-semibold">{game.player2.username}</p>
+            <p className="text-sm text-gray-300">
+              {game.player2.id === game.winner?.id ? 'Winner!' : ''}
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="flex justify-center">
@@ -98,10 +101,10 @@ function Game() {
         {game.status === 'playing' && !result && (
           <p className="text-xl">Flipping coin...</p>
         )}
-        {game.status === 'finished' && (
+        {game.status === 'finished' && game.winner && (
           <div>
             <p className="text-2xl font-bold mb-2">
-              {game.winner?.username} wins!
+              {game.winner.username} wins!
             </p>
             <p className="text-gray-300">
               {game.betAmount * 2} stars have been transferred

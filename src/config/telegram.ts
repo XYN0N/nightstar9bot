@@ -1,10 +1,10 @@
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
-const ADMIN_ID = parseInt(process.env.ADMIN_ID || '506336274', 10);
-const GOOGLE_WALLET_API_KEY = process.env.GOOGLE_WALLET_API_KEY || '';
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
+// Import environment variables directly in development
+const TELEGRAM_BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN || '';
+const ADMIN_ID = Number(import.meta.env.VITE_ADMIN_ID) || 506336274;
+const GOOGLE_WALLET_API_KEY = import.meta.env.VITE_GOOGLE_WALLET_API_KEY || '';
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+const GOOGLE_CLIENT_SECRET = import.meta.env.VITE_GOOGLE_CLIENT_SECRET || '';
 
-// Star package configurations
 const STAR_PACKAGES = [
   { stars: 100, price: 2.29 },
   { stars: 250, price: 5.79 },

@@ -1,10 +1,9 @@
-import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { Star, Home } from 'lucide-react';
 import { useQuery } from 'react-query';
 import { getUserData } from '../api/user';
 
-function Layout() {
+export default function Layout() {
   const { data: user } = useQuery('userData', getUserData, {
     refetchOnMount: true,
     refetchOnWindowFocus: true
@@ -52,5 +51,3 @@ function Layout() {
     </div>
   );
 }
-
-export default Layout
