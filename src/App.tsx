@@ -1,6 +1,7 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
+import axios from 'axios';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
 import Challenges from './pages/Challenges';
@@ -20,82 +21,54 @@ const queryClient = new QueryClient({
   }
 });
 
-function TelegramAuthCheck({ children }: { children: React.ReactNode }) {
+function App() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const navigate = useNavigate();
+  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
 
   React.useEffect(() => {
     const initializeApp = async () => {
       try {
-        // Check if we're in Telegram
-        if (typeof window !== 'undefined' && !window.Telegram?.WebApp) {
+        // Check if we're in Telegram WebApp
+        const twa = window.Telegram?.WebApp;
+        if (!twa) {
           setError('Please open this app through Telegram');
           setIsLoading(false);
           return;
         }
 
-        // Get Telegram WebApp instance safely
-        const twa = window.Telegram?.WebApp;
-        if (!twa) {
-          throw new Error('Telegram WebApp not available');
-        }
+        // Initialize WebApp
+        twa.ready();
+        twa.expand();
 
-        // Initialize Telegram WebApp
-        try {
-          if (!twa.isExpanded) {
-            twa.expand();
-          }
-          twa.ready();
-        } catch (e) {
-          console.warn('WebApp initialization warning:', e);
-        }
-
-        // Get user data from WebApp
-        const initData = twa.initData;
-        const userData = twa.initDataUnsafe?.user;
-
-        if (!userData) {
-          setError('No user data available. Please open this app through Telegram.');
-          setIsLoading(false);
-          return;
-        }
-
-        // Set up axios interceptor for Telegram data
-        axios.interceptors.request.use((config) => {
-          if (config.headers) {
-            config.headers['X-Telegram-Init-Data'] = initData;
-            config.headers['X-Telegram-User'] = JSON.stringify(userData);
-          }
-          return config;
-        });
+        // Set headers for all future requests
+        axios.defaults.headers.common['X-Telegram-Init-Data'] = twa.initData;
 
         // Initialize user session
         const response = await axios.post('/api/auth/initialize');
         if (response.data) {
           queryClient.setQueryData('userData', response.data);
-          setIsLoading(false);
-          navigate('/profile'); // Redirect to profile page after auth
-          return;
+          setIsAuthenticated(true);
         }
 
-        setError('Failed to initialize user data');
         setIsLoading(false);
       } catch (e: any) {
         console.error('Error initializing app:', e);
-        if (e.response?.data?.error?.includes('start the bot')) {
+        const errorMessage = e.response?.data?.error || e.message;
+        
+        if (errorMessage.includes('start the bot')) {
           const botUsername = e.response?.data?.botUsername || 'starnight9bot';
           window.location.href = `https://t.me/${botUsername}?start=webapp`;
           return;
         }
-        const errorMessage = e.response?.data?.error || e.message || 'Unable to initialize app';
+        
         setError(errorMessage);
         setIsLoading(false);
       }
     };
 
     initializeApp();
-  }, [navigate]);
+  }, []);
 
   if (isLoading) {
     return (
@@ -127,30 +100,28 @@ function TelegramAuthCheck({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return <>{children}</>;
-}
+  if (!isAuthenticated) {
+    return null;
+  }
 
-function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <TelegramAuthCheck>
-          <Routes>
-            <Route path="/" element={<Layout />}>
-              <Route index element={<Home />} />
-              <Route path="profile" element={<Profile />} />
-              <Route path="challenges" element={<Challenges />} />
-              <Route path="game/:gameId" element={<Game />} />
-              <Route path="recharge" element={<Recharge />} />
-              <Route path="leaderboard" element={<Leaderboard />} />
-              <Route path="admin" element={<AdminPanel />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Route>
-          </Routes>
-        </TelegramAuthCheck>
+        <Routes>
+          <Route path="/" element={<Layout />}>
+            <Route index element={<Navigate to="/profile" replace />} />
+            <Route path="profile" element={<Profile />} />
+            <Route path="challenges" element={<Challenges />} />
+            <Route path="game/:gameId" element={<Game />} />
+            <Route path="recharge" element={<Recharge />} />
+            <Route path="leaderboard" element={<Leaderboard />} />
+            <Route path="admin" element={<AdminPanel />} />
+            <Route path="*" element={<Navigate to="/profile" replace />} />
+          </Route>
+        </Routes>
       </BrowserRouter>
     </QueryClientProvider>
   );
 }
 
-export default App;
+export default App
