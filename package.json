@@ -9,7 +9,7 @@
     "build:client": "tsc && vite build",
     "build:server": "tsc -p tsconfig.server.json",
     "heroku-postbuild": "npm run build",
-    "start": "node dist/server/index.js",
+    "start": "node dist/server/server/index.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -37,7 +37,8 @@
     "@colyseus/monitor": "^0.15.0",
     "@colyseus/schema": "^2.0.0",
     "colyseus.js": "^0.15.0",
-    "grammy": "^1.21.1"
+    "grammy": "^1.21.1",
+    "reflect-metadata": "^0.2.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.5",

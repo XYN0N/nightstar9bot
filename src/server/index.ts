@@ -1,3 +1,4 @@
+import "reflect-metadata";
 import { Server } from "@colyseus/core";
 import { WebSocketTransport } from "@colyseus/ws-transport";
 import { monitor } from "@colyseus/monitor";
@@ -101,7 +102,7 @@ const verifyTelegramWebAppData = (req: Request, res: Response, next: NextFunctio
 app.use('/api/*', verifyTelegramWebAppData);
 
 // Serve static files from the dist directory
-app.use(express.static(path.join(__dirname, '../../dist')));
+app.use(express.static(path.join(__dirname, '../../../dist')));
 
 // Monitor endpoint (admin only)
 app.use("/colyseus", (req: Request, res: Response, next: NextFunction) => {
@@ -178,7 +179,7 @@ app.post('/api/auth/initialize', async (req: Request, res: Response) => {
 
 // Serve React app for all other routes
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../dist/index.html'));
+  res.sendFile(path.join(__dirname, '../../../dist/index.html'));
 });
 
 // Bot commands
