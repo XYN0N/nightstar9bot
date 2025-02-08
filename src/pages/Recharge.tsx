@@ -2,10 +2,12 @@ import React from 'react';
 import { Star, Gift } from 'lucide-react';
 import { useMutation, useQueryClient } from 'react-query';
 import axios from 'axios';
+import { User } from '../types';
 
 function Recharge() {
   const [clickCount, setClickCount] = React.useState(0);
   const queryClient = useQueryClient();
+  const userData = queryClient.getQueryData<User>('userData');
 
   const earnStarsMutation = useMutation(
     async () => {
@@ -28,6 +30,13 @@ function Recharge() {
       }
       return newCount;
     });
+  };
+
+  const handleCopyReferralLink = () => {
+    if (userData?.id) {
+      const referralLink = `https://t.me/nightstar9/app?startapp=refUser_${userData.id}`;
+      navigator.clipboard.writeText(referralLink);
+    }
   };
 
   return (
@@ -62,11 +71,7 @@ function Recharge() {
             Share your referral link and earn 100 stars for each friend who joins!
           </p>
           <button 
-            onClick={() => {
-              // Copy referral link to clipboard
-              const referralLink = `https://t.me/nightstar9/app?startapp=refUser_${queryClient.getQueryData('userData')?.id}`;
-              navigator.clipboard.writeText(referralLink);
-            }}
+            onClick={handleCopyReferralLink}
             className="w-full p-4 bg-emerald-500/20 text-emerald-300 rounded-lg font-semibold hover:bg-emerald-500/30 transition-colors"
           >
             Copy Referral Link
