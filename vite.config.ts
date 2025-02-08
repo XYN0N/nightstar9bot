@@ -19,6 +19,8 @@ export default defineConfig({
         target: 'ws://localhost:3000',
         ws: true
       }
-    }
+    },
+    host: true, // Add this to allow external access
+    strictPort: true // Add this to ensure the port doesn't change
   }
 });

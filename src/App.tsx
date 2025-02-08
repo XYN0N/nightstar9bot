@@ -55,30 +55,39 @@ const queryClient = new QueryClient({
 function App() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [isTelegram, setIsTelegram] = React.useState(false);
 
   React.useEffect(() => {
     const initializeApp = async () => {
       try {
         // Check if we're in Telegram
         const twa = window.Telegram?.WebApp;
+        if (!twa) {
+          setIsTelegram(false);
+          setIsLoading(false);
+          return;
+        }
+
+        setIsTelegram(true);
         
         // Initialize Telegram WebApp
         try {
-          if (twa) {
-            twa.ready();
-            twa.expand(); // Expand the WebApp to full height
-          }
+          twa.ready();
+          twa.expand(); // Expand the WebApp to full height
         } catch (e) {
           console.error('Error initializing Telegram WebApp:', e);
+        }
+
+        // Verify we have user data
+        if (!twa.initDataUnsafe.user) {
+          throw new Error('No user data available. Please open this app through Telegram.');
         }
         
         // Set up axios interceptor for Telegram data
         axios.interceptors.request.use((config) => {
-          if (config.headers && twa) {
-            config.headers['X-Telegram-Init-Data'] = twa.initData || '';
-            if (twa.initDataUnsafe.user) {
-              config.headers['X-Telegram-User'] = JSON.stringify(twa.initDataUnsafe.user);
-            }
+          if (config.headers) {
+            config.headers['X-Telegram-Init-Data'] = twa.initData;
+            config.headers['X-Telegram-User'] = JSON.stringify(twa.initDataUnsafe.user);
           }
           return config;
         });
@@ -110,6 +119,25 @@ function App() {
     initializeApp();
   }, []);
 
+  if (!isTelegram) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 to-purple-900 text-white flex items-center justify-center">
+        <div className="text-center p-8">
+          <h1 className="text-4xl font-bold mb-4">⭐️ StarNight</h1>
+          <p className="text-xl mb-6">This app is only available through Telegram.</p>
+          <a 
+            href="https://t.me/starnight9bot"
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="px-6 py-3 bg-blue-500 rounded-lg font-semibold hover:bg-blue-600 transition-colors inline-flex items-center gap-2"
+          >
+            Open in Telegram
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 to-purple-900 text-white flex items-center justify-center">
@@ -125,16 +153,14 @@ function App() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 to-purple-900 text-white flex items-center justify-center">
         <div className="text-center p-8">
-          <h1 className="text-4xl font-bold mb-4">⭐️ StarNight</h1>
+          <h1 className="text-4xl font-bold mb-4">⭐️ Error</h1>
           <p className="text-xl mb-6">{error}</p>
-          <a 
-            href="https://t.me/starnight9bot"
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="px-6 py-3 bg-blue-500 rounded-lg font-semibold hover:bg-blue-600 transition-colors inline-flex items-center gap-2"
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 bg-blue-500 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
           >
-            Open in Telegram
-          </a>
+            Try Again
+          </button>
         </div>
       </div>
     );
