@@ -6,4 +6,4 @@ export const STAR_PACKAGES = [
   { stars: 500, price: 11.59 },
   { stars: 750, price: 17.48 },
   { stars: 1000, price: 22.99 }
-];
+] as const;

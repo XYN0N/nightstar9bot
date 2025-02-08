@@ -20,19 +20,15 @@ const redis = new Redis(REDIS_URL);
 
 // Connect to MongoDB with retries
 const connectWithRetry = () => {
-  mongoose.connect(MONGODB_URL, {
-    serverSelectionTimeoutMS: 5000,
-    retryWrites: true,
-    w: 'majority'
-  })
-  .then(() => {
-    console.log('MongoDB connected successfully');
-  })
-  .catch((err) => {
-    console.error('MongoDB connection error:', err);
-    console.log('Retrying in 5 seconds...');
-    setTimeout(connectWithRetry, 5000);
-  });
+  mongoose.connect(MONGODB_URL)
+    .then(() => {
+      console.log('MongoDB connected successfully');
+    })
+    .catch((err) => {
+      console.error('MongoDB connection error:', err);
+      console.log('Retrying in 5 seconds...');
+      setTimeout(connectWithRetry, 5000);
+    });
 };
 
 connectWithRetry();
