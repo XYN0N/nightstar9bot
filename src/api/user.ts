@@ -2,7 +2,7 @@ import axios from 'axios';
 import { User, LeaderboardEntry } from '../types';
 
 export async function getUserData(): Promise<User> {
-  const response = await axios.get('/api/user');
+  const response = await axios.post('/api/auth/initialize');
   return response.data;
 }
 

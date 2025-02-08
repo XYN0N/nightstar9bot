@@ -1,9 +1,9 @@
-// Use environment variables for sensitive data
-export const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '7996379094:AAGGvxufeR9Pxsq3vBA8nY6Ti-zIVHsHV3c';
-export const ADMIN_ID = parseInt(process.env.ADMIN_ID || '506336274');
-export const GOOGLE_WALLET_API_KEY = process.env.GOOGLE_WALLET_API_KEY || 'AIzaSyDg1aF7vn8FGShHsfVRmLwrSV203d028Sg';
-export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '655968772922-d922fbcp0jr7svnq4ul8ua28liaj7m4v.apps.googleusercontent.com';
-export const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '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';
+// Use import.meta.env for client-side environment variables
+export const TELEGRAM_BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN || '';
+export const ADMIN_ID = parseInt(import.meta.env.VITE_ADMIN_ID || '506336274');
+export const GOOGLE_WALLET_API_KEY = import.meta.env.VITE_GOOGLE_WALLET_API_KEY || '';
+export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+export const GOOGLE_CLIENT_SECRET = import.meta.env.VITE_GOOGLE_CLIENT_SECRET || '';
 
 export const STAR_PACKAGES = [
   { stars: 100, price: 2.29 },

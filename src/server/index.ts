@@ -154,7 +154,7 @@ app.post('/api/auth/initialize', async (req: express.Request, res: express.Respo
     // Create or update user
     const userData = {
       telegramId: telegramUser.id,
-      username: telegramUser.username || 'Anonymous',
+      username: telegramUser.username || telegramUser.first_name || 'Anonymous',
       firstName: telegramUser.first_name,
       lastName: telegramUser.last_name,
       languageCode: telegramUser.language_code,

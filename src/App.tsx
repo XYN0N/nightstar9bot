@@ -11,11 +11,47 @@ import AdminPanel from './pages/AdminPanel';
 import Layout from './components/Layout';
 import axios from 'axios';
 
-const queryClient = new QueryClient();
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp: {
+        ready: () => void;
+        initData: string;
+        initDataUnsafe: {
+          user?: {
+            id: number;
+            first_name: string;
+            last_name?: string;
+            username?: string;
+            language_code?: string;
+          };
+        };
+        showAlert?: (message: string) => void;
+        showConfirm?: (message: string) => Promise<boolean>;
+        MainButton?: {
+          show: () => void;
+          hide: () => void;
+          setText: (text: string) => void;
+        };
+      };
+    };
+  }
+}
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      refetchOnWindowFocus: false,
+      staleTime: 5000
+    }
+  }
+});
 
 function App() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [isTelegram, setIsTelegram] = React.useState(false);
 
   React.useEffect(() => {
     const initializeApp = async () => {
@@ -23,39 +59,77 @@ function App() {
         // Check if we're in Telegram
         const twa = window.Telegram?.WebApp;
         if (!twa) {
-          throw new Error('This app is only available through Telegram.');
+          setIsTelegram(false);
+          setIsLoading(false);
+          return;
         }
 
+        setIsTelegram(true);
+
         // Initialize Telegram WebApp
-        twa.ready();
+        try {
+          twa.ready();
+        } catch (e) {
+          console.error('Error initializing Telegram WebApp:', e);
+          throw new Error('Failed to initialize Telegram WebApp');
+        }
         
-        // Set up axios interceptor
+        // Verify we have user data
+        if (!twa.initDataUnsafe.user) {
+          throw new Error('No user data available. Please open this app through Telegram.');
+        }
+
+        // Set up axios interceptor for Telegram data
         axios.interceptors.request.use((config) => {
           if (config.headers) {
-            config.headers['X-Telegram-Init-Data'] = twa.initData;
+            config.headers['X-Telegram-Init-Data'] = twa.initData || '';
           }
           return config;
         });
 
         // Initialize user session
-        const response = await axios.post('/api/auth/initialize');
-        if (!response.data) {
-          throw new Error('Failed to initialize user profile');
-        }
+        try {
+          const response = await axios.post('/api/auth/initialize');
+          if (!response.data) {
+            throw new Error('Failed to initialize user profile');
+          }
 
-        // Store user data
-        queryClient.setQueryData('userData', response.data);
+          // Store user data
+          queryClient.setQueryData('userData', response.data);
+        } catch (e: any) {
+          console.error('Error initializing user session:', e);
+          throw new Error(e.response?.data?.error || 'Failed to initialize user profile');
+        }
         
         setIsLoading(false);
       } catch (e: any) {
         console.error('Error initializing app:', e);
-        setError(e.response?.data?.error || e.message || 'Unable to initialize app. Please try again.');
+        setError(e.message || 'Unable to initialize app. Please try again.');
         setIsLoading(false);
       }
     };
 
     initializeApp();
   }, []);
+
+  if (!isTelegram) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 to-purple-900 text-white flex items-center justify-center">
+        <div className="text-center p-8">
+          <h1 className="text-4xl font-bold mb-4">⭐️ StarNight</h1>
+          <p className="text-xl mb-6">This app is only available through Telegram.</p>
+          <a 
+            href="https://t.me/starnight9bot"
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="px-6 py-3 bg-blue-500 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
+          >
+            Open in Telegram
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
