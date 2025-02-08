@@ -26,57 +26,38 @@ function AuthenticatedApp() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [isTelegramWebApp, setIsTelegramWebApp] = React.useState(false);
 
   React.useEffect(() => {
     const initializeApp = async () => {
       try {
-        // Check if we're in Telegram WebApp
-        if (!WebApp) {
-          setError('Please open this app through Telegram');
-          setIsLoading(false);
-          return;
-        }
+        // Initialize WebApp
+        if (window.Telegram?.WebApp) {
+          window.Telegram.WebApp.ready();
+          window.Telegram.WebApp.expand();
 
-        // Initialize Telegram WebApp
-        WebApp.ready();
-        WebApp.expand();
-        setIsTelegramWebApp(true);
-
-        // Set up axios interceptor for Telegram data
-        axios.interceptors.request.use((config) => {
-          if (config.headers) {
-            config.headers['X-Telegram-Init-Data'] = WebApp.initData;
-            if (WebApp.initDataUnsafe?.user) {
-              config.headers['X-Telegram-User'] = JSON.stringify(WebApp.initDataUnsafe.user);
+          // Set up axios interceptor for Telegram data
+          axios.interceptors.request.use((config) => {
+            if (config.headers) {
+              config.headers['X-Telegram-Init-Data'] = window.Telegram.WebApp.initData;
+              if (window.Telegram.WebApp.initDataUnsafe?.user) {
+                config.headers['X-Telegram-User'] = JSON.stringify(window.Telegram.WebApp.initDataUnsafe.user);
+              }
             }
-          }
-          return config;
-        });
+            return config;
+          });
 
-        // Check existing session first
-        try {
-          const sessionResponse = await axios.get('/api/auth/session');
-          if (sessionResponse.data) {
-            queryClient.setQueryData('userData', sessionResponse.data);
+          // Initialize user session
+          const response = await axios.post('/api/auth/initialize');
+          if (response.data) {
+            queryClient.setQueryData('userData', response.data);
             setIsLoading(false);
-            navigate('/home');
+            navigate('/home', { replace: true });
             return;
           }
-        } catch (e) {
-          console.log('No existing session, creating new one...');
         }
 
-        // Initialize new session
-        const response = await axios.post('/api/auth/initialize');
-        if (!response.data) {
-          throw new Error('Failed to initialize user profile');
-        }
-
-        // Store user data and redirect to home
-        queryClient.setQueryData('userData', response.data);
+        setError('Please open this app through Telegram');
         setIsLoading(false);
-        navigate('/home');
       } catch (e: any) {
         console.error('Error initializing app:', e);
         const errorMessage = e.response?.data?.error || e.message || 'Unable to initialize app';
@@ -87,25 +68,6 @@ function AuthenticatedApp() {
 
     initializeApp();
   }, [navigate]);
-
-  if (!isTelegramWebApp) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 to-purple-900 text-white flex items-center justify-center">
-        <div className="text-center p-8">
-          <h1 className="text-4xl font-bold mb-4">⭐️ StarNight</h1>
-          <p className="text-xl mb-6">This app is only available through Telegram.</p>
-          <a 
-            href="https://t.me/starnight9bot"
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="px-6 py-3 bg-blue-500 rounded-lg font-semibold hover:bg-blue-600 transition-colors inline-flex items-center gap-2"
-          >
-            Open in Telegram
-          </a>
-        </div>
-      </div>
-    );
-  }
 
   if (isLoading) {
     return (
@@ -122,7 +84,7 @@ function AuthenticatedApp() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 to-purple-900 text-white flex items-center justify-center">
         <div className="text-center p-8">
-          <h1 className="text-4xl font-bold mb-4">⭐️ Error</h1>
+          <h1 className="text-4xl font-bold mb-4">⭐️ StarNight</h1>
           <p className="text-xl mb-6">{error}</p>
           {error.includes('start the bot') ? (
             <a 
@@ -134,12 +96,14 @@ function AuthenticatedApp() {
               Start Bot
             </a>
           ) : (
-            <button 
-              onClick={() => window.location.reload()}
-              className="px-6 py-3 bg-blue-500 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
+            <a 
+              href="https://t.me/starnight9bot"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-6 py-3 bg-blue-500 rounded-lg font-semibold hover:bg-blue-600 transition-colors inline-flex items-center gap-2"
             >
-              Try Again
-            </button>
+              Open in Telegram
+            </a>
           )}
         </div>
       </div>

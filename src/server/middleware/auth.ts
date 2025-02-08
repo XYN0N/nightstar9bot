@@ -17,7 +17,13 @@ export function verifyTelegramWebAppData(req: Request, res: Response, next: Next
       return res.status(401).json({ error: 'Invalid user data' });
     }
 
-    // Validate the data
+    // In development, skip hash validation
+    if (process.env.NODE_ENV === 'development') {
+      req.telegramUser = user;
+      return next();
+    }
+
+    // Validate the data in production
     const urlParams = new URLSearchParams(initData);
     const hash = urlParams.get('hash');
     if (!hash) {
@@ -42,10 +48,7 @@ export function verifyTelegramWebAppData(req: Request, res: Response, next: Next
       .digest('hex');
     
     if (calculatedHash !== hash) {
-      console.error('Hash mismatch:', { calculated: calculatedHash, received: hash });
-      // In development, we'll log the error but continue
-      // In production, uncomment the following line:
-      // return res.status(401).json({ error: 'Invalid Telegram data signature' });
+      return res.status(401).json({ error: 'Invalid Telegram data signature' });
     }
 
     // Add user data to request
