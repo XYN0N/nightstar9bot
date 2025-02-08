@@ -4,8 +4,8 @@ import { Server } from 'socket.io';
 import { Redis } from 'ioredis';
 import mongoose from 'mongoose';
 import TelegramBot from 'node-telegram-bot-api';
-import { TELEGRAM_BOT_TOKEN, ADMIN_ID } from '../config/telegram';
-import { REDIS_URL, MONGODB_URL } from '../config/database';
+import { TELEGRAM_BOT_TOKEN, ADMIN_ID } from '../config/telegram.js';
+import { REDIS_URL, MONGODB_URL } from '../config/database.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -142,17 +142,21 @@ io.on('connection', (socket) => {
 // Telegram Bot
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
-  const user = await User.findOne({ telegramId: chatId });
+  try {
+    const user = await User.findOne({ telegramId: chatId });
 
-  if (!user) {
-    const newUser = new User({
-      telegramId: chatId,
-      username: msg.from?.username || 'Anonymous',
-      photoUrl: msg.from?.photo?.big_file_id,
-      stars: 0,
-    });
-    await newUser.save();
-    bot.sendMessage(chatId, 'Welcome to StarNight! 🌟');
+    if (!user) {
+      const newUser = new User({
+        telegramId: chatId,
+        username: msg.from?.username || 'Anonymous',
+        photoUrl: msg.from?.photo?.big_file_id || '',
+        stars: 0,
+      });
+      await newUser.save();
+      bot.sendMessage(chatId, 'Welcome to StarNight! 🌟');
+    }
+  } catch (error) {
+    console.error('Error handling message:', error);
   }
 });
 
