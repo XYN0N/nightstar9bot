@@ -8,7 +8,10 @@ export default function Leaderboard() {
   const { data: leaderboard, isLoading, error } = useQuery('leaderboard', getLeaderboard, {
     refetchInterval: 30000,
     retry: 3,
-    staleTime: 60000
+    staleTime: 60000,
+    onError: (error) => {
+      console.error('Leaderboard error:', error);
+    }
   });
 
   if (error) {
@@ -17,6 +20,7 @@ export default function Leaderboard() {
         <div className="text-center">
           <h1 className="text-3xl font-bold mb-2">Leaderboard</h1>
           <div className="p-8 bg-white/10 rounded-lg">
+            <Trophy className="w-12 h-12 mx-auto mb-4 text-yellow-400" />
             <p className="text-red-400">Failed to load leaderboard. Please try again.</p>
           </div>
         </div>
