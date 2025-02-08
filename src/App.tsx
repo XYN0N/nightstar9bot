@@ -10,20 +10,57 @@ import Recharge from './pages/Recharge';
 import Leaderboard from './pages/Leaderboard';
 import AdminPanel from './pages/AdminPanel';
 import Layout from './components/Layout';
+import axios from 'axios';
 
 const queryClient = new QueryClient();
 
 function App() {
   const [isTelegram, setIsTelegram] = React.useState(false);
+  const [isInitialized, setIsInitialized] = React.useState(false);
 
   React.useEffect(() => {
     try {
+      // Initialize Telegram WebApp
       WebApp.ready();
       setIsTelegram(true);
+
+      // Set up axios interceptor to include Telegram user data
+      axios.interceptors.request.use((config) => {
+        const initData = WebApp.initData;
+        if (initData) {
+          config.headers['X-Telegram-Init-Data'] = initData;
+          // Extract user ID from initData and add it as a header
+          try {
+            const data = Object.fromEntries(new URLSearchParams(initData));
+            if (data.user) {
+              const user = JSON.parse(data.user);
+              config.headers['X-Telegram-ID'] = user.id;
+            }
+          } catch (e) {
+            console.error('Error parsing Telegram init data:', e);
+          }
+        }
+        return config;
+      });
+
+      setIsInitialized(true);
     } catch (e) {
+      console.error('Error initializing Telegram WebApp:', e);
       setIsTelegram(false);
+      setIsInitialized(true);
     }
   }, []);
+
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 to-purple-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent mx-auto"></div>
+          <p className="mt-4">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isTelegram) {
     return (
