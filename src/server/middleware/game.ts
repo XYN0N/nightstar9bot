@@ -1,23 +1,16 @@
 import { Request, Response, NextFunction } from 'express';
-import { User } from '../models/User.js';
 
-export async function validateGameRequest(req: Request, res: Response, next: NextFunction) {
+export function validateGameRequest(req: Request, res: Response, next: NextFunction) {
+  // In development mode, skip validation
+  if (process.env.NODE_ENV === 'development') {
+    return next();
+  }
+
   try {
-    const telegramUser = req.telegramUser;
-    if (!telegramUser) {
-      return res.status(401).json({ error: 'Unauthorized' });
+    const { betAmount } = req.body;
+    if (!betAmount || betAmount < 15 || betAmount > 100) {
+      return res.status(400).json({ error: 'Invalid bet amount' });
     }
-
-    const user = await User.findOne({ telegramId: telegramUser.id });
-    if (!user) {
-      return res.status(401).json({ error: 'User not found' });
-    }
-
-    if (user.stars < (req.body.betAmount || 0)) {
-      return res.status(400).json({ error: 'Insufficient stars' });
-    }
-
-    req.gameUser = user;
     next();
   } catch (error) {
     console.error('Game validation error:', error);

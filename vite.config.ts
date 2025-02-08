@@ -6,19 +6,24 @@ export default defineConfig({
   plugins: [react()],
   build: {
     outDir: 'dist/client',
-    emptyOutDir: true
+    emptyOutDir: true,
+    sourcemap: true
   },
   server: {
+    port: 5173,
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
-        secure: false,
+        secure: false
+      },
+      '/socket.io': {
+        target: 'ws://localhost:3000',
         ws: true
       },
       '/colyseus': {
-        target: 'ws://localhost:3000',
-        ws: true
+        target: 'http://localhost:3000',
+        changeOrigin: true
       }
     }
   }

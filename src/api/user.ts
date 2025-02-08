@@ -1,13 +1,16 @@
 import axios from 'axios';
 import { User, LeaderboardEntry } from '../types';
 
-// Use the production URL or fallback to development
-const API_URL = process.env.NODE_ENV === 'production'
-  ? 'https://nightstar9bot-d607ada78002.herokuapp.com'
-  : 'http://localhost:3000';
+// Get the API URL based on environment
+const getAPIURL = () => {
+  if (import.meta.env.PROD) {
+    return window.location.origin;
+  }
+  return 'http://localhost:3000';
+};
 
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: getAPIURL(),
   withCredentials: true
 });
 
@@ -16,7 +19,7 @@ export async function getUserData(): Promise<User> {
     const response = await api.post('/api/auth/initialize');
     return response.data;
   } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       // Return mock data in development
       return {
         id: 1,

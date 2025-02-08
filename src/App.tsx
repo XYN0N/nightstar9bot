@@ -11,6 +11,18 @@ import Leaderboard from './pages/Leaderboard';
 import AdminPanel from './pages/AdminPanel';
 import Layout from './components/Layout';
 
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp: {
+        ready: () => void;
+        expand: () => void;
+        initData: string;
+      };
+    };
+  }
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -29,29 +41,27 @@ function App() {
   React.useEffect(() => {
     const initializeApp = async () => {
       try {
-        // Check if we're in Telegram WebApp
-        const twa = window.Telegram?.WebApp;
-        
-        // If we're not in Telegram and not in development, show the Telegram prompt
-        if (!twa && process.env.NODE_ENV !== 'development') {
-          setError('Please open this app through Telegram');
-          setIsLoading(false);
-          return;
-        }
-
-        // In development, we can proceed without Telegram
-        if (process.env.NODE_ENV === 'development') {
+        // In development, skip Telegram checks
+        if (import.meta.env.DEV) {
           setIsAuthenticated(true);
           setIsLoading(false);
           return;
         }
 
-        // Set up headers for API requests
-        if (twa) {
-          twa.ready();
-          twa.expand();
-          axios.defaults.headers.common['X-Telegram-Init-Data'] = twa.initData;
+        // Check if we're in Telegram WebApp
+        const twa = window.Telegram?.WebApp;
+        if (!twa) {
+          setError('Please open this app through Telegram');
+          setIsLoading(false);
+          return;
         }
+
+        // Initialize Telegram WebApp
+        twa.ready();
+        twa.expand();
+
+        // Set up headers for API requests
+        axios.defaults.headers.common['X-Telegram-Init-Data'] = twa.initData;
 
         // Initialize user session
         const response = await axios.post('/api/auth/initialize');
@@ -101,7 +111,7 @@ function App() {
     );
   }
 
-  if (!isAuthenticated && process.env.NODE_ENV !== 'development') {
+  if (!isAuthenticated && !import.meta.env.DEV) {
     return null;
   }
 

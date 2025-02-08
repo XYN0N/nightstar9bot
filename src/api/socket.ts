@@ -1,13 +1,27 @@
 import { io } from 'socket.io-client';
 
-// Use the production URL or fallback to development
-const SOCKET_URL = process.env.NODE_ENV === 'production'
-  ? 'wss://nightstar9bot-d607ada78002.herokuapp.com'
-  : 'ws://localhost:3000';
+// Get the WebSocket URL based on environment
+const getWebSocketURL = () => {
+  if (import.meta.env.PROD) {
+    return window.location.origin;
+  }
+  return 'http://localhost:3000';
+};
 
-const socket = io(SOCKET_URL, {
+const socket = io(getWebSocketURL(), {
   transports: ['websocket'],
-  autoConnect: true
+  autoConnect: true,
+  path: '/socket.io',
+  withCredentials: true
+});
+
+// Add connection event handlers
+socket.on('connect', () => {
+  console.log('Socket connected');
+});
+
+socket.on('connect_error', (error) => {
+  console.error('Socket connection error:', error);
 });
 
 export function joinGame(gameId: string) {
