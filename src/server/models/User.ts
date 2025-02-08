@@ -1,5 +1,23 @@
 import mongoose from 'mongoose';
 
+interface IUser extends mongoose.Document {
+  telegramId: number;
+  username: string;
+  firstName?: string;
+  lastName?: string;
+  photoUrl?: string;
+  stars: number;
+  totalWins: number;
+  totalLosses: number;
+  totalEarnings: number;
+  isPremium: boolean;
+  lastActive: Date;
+  lastClaim?: Date;
+  referralCode?: string;
+  referredBy?: number;
+  canClaimStars: () => boolean;
+}
+
 const UserSchema = new mongoose.Schema({
   telegramId: { type: Number, required: true, unique: true },
   username: { type: String, required: true },
@@ -26,11 +44,11 @@ UserSchema.pre('save', function(next) {
 });
 
 // Add method to check if user can claim stars
-UserSchema.methods.canClaimStars = function() {
+UserSchema.methods.canClaimStars = function(this: IUser): boolean {
   if (!this.lastClaim) return true;
   
   const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
   return this.lastClaim < threeHoursAgo;
 };
 
-export const User = mongoose.model('User', UserSchema);
+export const User = mongoose.model<IUser>('User', UserSchema);

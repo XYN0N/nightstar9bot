@@ -123,15 +123,20 @@ app.post('/api/auth/initialize', verifyTelegramWebAppData, async (req: Request, 
 // Add this new route for claiming stars
 app.post('/api/stars/claim', verifyTelegramWebAppData, async (req: Request, res: Response) => {
   try {
-    const user = await User.findOne({ telegramId: req.telegramUser?.id });
+    if (!req.telegramUser?.id) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const user = await User.findOne({ telegramId: req.telegramUser.id });
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
     if (!user.canClaimStars()) {
+      const nextClaimTime = user.lastClaim ? new Date(user.lastClaim.getTime() + 3 * 60 * 60 * 1000) : new Date();
       return res.status(400).json({ 
         error: 'You can only claim stars every 3 hours',
-        nextClaimTime: new Date(user.lastClaim.getTime() + 3 * 60 * 60 * 1000)
+        nextClaimTime
       });
     }
 
