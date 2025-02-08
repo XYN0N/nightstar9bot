@@ -1,11 +1,115 @@
 import React from 'react';
 import { Star } from 'lucide-react';
-import { STAR_PACKAGES } from '../config/telegram';
+import { STAR_PACKAGES, GOOGLE_WALLET_API_KEY } from '../config/telegram';
+import { WebApp } from '@twa-dev/sdk';
 
 function Recharge() {
-  const handlePurchase = (stars: number, price: number) => {
-    // Telegram payment logic will be implemented here
-    console.log(`Purchasing ${stars} stars for €${price}`);
+  const handlePurchase = async (stars: number, price: number) => {
+    try {
+      // Create Google Pay button
+      const button = document.createElement('button');
+      button.className = 'gpay-button black long';
+      
+      // Configure Google Pay
+      const paymentClient = new google.payments.api.PaymentsClient({
+        environment: 'PRODUCTION',
+        paymentDataCallbacks: {
+          onPaymentAuthorized: async (paymentData: any) => {
+            try {
+              // Process the payment on your backend
+              const response = await fetch('/api/payment/process', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  paymentData,
+                  stars,
+                  price,
+                  telegramInitData: WebApp.initData
+                }),
+              });
+
+              if (!response.ok) {
+                throw new Error('Payment processing failed');
+              }
+
+              // Show success message
+              WebApp.showPopup({
+                title: 'Success!',
+                message: `You've purchased ${stars} stars!`,
+                buttons: [{ type: 'ok' }]
+              });
+
+              // Refresh user data
+              // You might want to trigger a refetch of user data here
+
+            } catch (error) {
+              console.error('Payment processing error:', error);
+              WebApp.showPopup({
+                title: 'Error',
+                message: 'Failed to process payment. Please try again.',
+                buttons: [{ type: 'ok' }]
+              });
+              return {
+                transactionState: 'ERROR'
+              };
+            }
+
+            return {
+              transactionState: 'SUCCESS'
+            };
+          }
+        }
+      });
+
+      const paymentDataRequest = {
+        apiVersion: 2,
+        apiVersionMinor: 0,
+        allowedPaymentMethods: [{
+          type: 'CARD',
+          parameters: {
+            allowedAuthMethods: ['PAN_ONLY', 'CRYPTOGRAM_3DS'],
+            allowedCardNetworks: ['MASTERCARD', 'VISA']
+          },
+          tokenizationSpecification: {
+            type: 'PAYMENT_GATEWAY',
+            parameters: {
+              gateway: 'stripe',
+              'stripe:version': '2020-08-27',
+              'stripe:publishableKey': GOOGLE_WALLET_API_KEY
+            }
+          }
+        }],
+        merchantInfo: {
+          merchantId: '12345678901234567890',
+          merchantName: 'StarNight'
+        },
+        transactionInfo: {
+          totalPriceStatus: 'FINAL',
+          totalPrice: price.toString(),
+          currencyCode: 'EUR',
+          countryCode: 'US'
+        }
+      };
+
+      const {error, paymentData} = await paymentClient.loadPaymentData(paymentDataRequest);
+      
+      if (error) {
+        throw error;
+      }
+
+      // Payment successful
+      console.log('Payment successful:', paymentData);
+      
+    } catch (error) {
+      console.error('Payment error:', error);
+      WebApp.showPopup({
+        title: 'Error',
+        message: 'Payment failed. Please try again.',
+        buttons: [{ type: 'ok' }]
+      });
+    }
   };
 
   return (

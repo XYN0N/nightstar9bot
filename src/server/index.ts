@@ -13,6 +13,7 @@ import { dirname } from 'path';
 import { GameRoom } from "./rooms/GameRoom.js";
 import { TELEGRAM_BOT_TOKEN, ADMIN_ID } from '../config/telegram.js';
 import { REDIS_URL, MONGODB_URL } from '../config/database.js';
+import crypto from 'crypto';
 
 // Extend Express Request type to include telegramUser
 declare global {
@@ -78,23 +79,58 @@ gameServer.define("game", GameRoom);
 // Middleware
 app.use(express.json());
 
+// Function to validate Telegram WebApp data
+function validateTelegramWebAppData(initData: string): boolean {
+  try {
+    const urlParams = new URLSearchParams(initData);
+    const hash = urlParams.get('hash');
+    urlParams.delete('hash');
+    
+    // Sort parameters alphabetically
+    const params = Array.from(urlParams.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, value]) => `${key}=${value}`)
+      .join('\n');
+    
+    // Calculate HMAC-SHA256
+    const secret = crypto.createHmac('sha256', 'WebAppData')
+      .update(TELEGRAM_BOT_TOKEN)
+      .digest();
+    
+    const calculatedHash = crypto.createHmac('sha256', secret)
+      .update(params)
+      .digest('hex');
+    
+    return calculatedHash === hash;
+  } catch (error) {
+    console.error('Error validating Telegram data:', error);
+    return false;
+  }
+}
+
 // Middleware to verify and parse Telegram WebApp data
 const verifyTelegramWebAppData = (req: Request, res: Response, next: NextFunction) => {
-  const initData = req.headers['x-telegram-init-data'];
+  const initData = req.headers['x-telegram-init-data'] as string;
   if (!initData) {
     return res.status(401).json({ error: 'No Telegram data provided' });
   }
 
   try {
-    const data = Object.fromEntries(new URLSearchParams(initData as string));
+    // Validate the data
+    if (!validateTelegramWebAppData(initData)) {
+      return res.status(401).json({ error: 'Invalid Telegram data signature' });
+    }
+
+    const data = Object.fromEntries(new URLSearchParams(initData));
     if (!data.user) {
       return res.status(401).json({ error: 'No user data found' });
     }
+
     req.telegramUser = JSON.parse(data.user);
     next();
   } catch (error) {
     console.error('Error verifying Telegram data:', error);
-    res.status(401).json({ error: 'Invalid Telegram data' });
+    res.status(401).json({ error: 'Invalid Telegram data format' });
   }
 };
 
@@ -117,7 +153,7 @@ const UserSchema = new mongoose.Schema({
   telegramId: { type: Number, required: true, unique: true },
   username: { type: String, required: true },
   photoUrl: { type: String },
-  stars: { type: Number, default: 0 },
+  stars: { type: Number, default: 100 }, // Start with 100 stars
   totalWins: { type: Number, default: 0 },
   totalLosses: { type: Number, default: 0 },
   totalEarnings: { type: Number, default: 0 },
@@ -165,7 +201,7 @@ app.post('/api/auth/initialize', async (req: Request, res: Response) => {
       { telegramId: telegramUser.id },
       { 
         $set: userData,
-        $setOnInsert: { stars: 100 }
+        $setOnInsert: { stars: 100 } // Only set stars if this is a new user
       },
       { upsert: true, new: true }
     );
@@ -174,6 +210,26 @@ app.post('/api/auth/initialize', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error initializing user:', error);
     res.status(500).json({ error: 'Failed to initialize user' });
+  }
+});
+
+// Get user data
+app.get('/api/user', async (req: Request, res: Response) => {
+  try {
+    const telegramUser = req.telegramUser;
+    if (!telegramUser) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const user = await User.findOne({ telegramId: telegramUser.id });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(user);
+  } catch (error) {
+    console.error('Error getting user data:', error);
+    res.status(500).json({ error: 'Failed to get user data' });
   }
 });
 
