@@ -2,32 +2,41 @@ import { Room, Client } from "@colyseus/core";
 import { Schema, type, MapSchema } from "@colyseus/schema";
 
 class PlayerState extends Schema {
-  @type("string") id: string = "";
-  @type("string") username: string = "";
-  @type("number") stars: number = 0;
-  @type("boolean") ready: boolean = false;
+  @type("string") id: string;
+  @type("string") username: string;
+  @type("number") stars: number;
+  @type("boolean") ready: boolean;
 
   constructor() {
     super();
+    this.id = "";
+    this.username = "";
+    this.stars = 0;
+    this.ready = false;
   }
 
-  setup(id: string, username: string, stars: number) {
-    this.id = id;
-    this.username = username;
-    this.stars = stars;
+  assign(data: { id: string; username: string; stars: number }) {
+    this.id = data.id;
+    this.username = data.username;
+    this.stars = data.stars;
     this.ready = false;
   }
 }
 
 class GameState extends Schema {
-  @type("string") status: string = "waiting";
-  @type("number") betAmount: number = 0;
-  @type({ map: PlayerState }) players = new MapSchema<PlayerState>();
-  @type("string") winner: string = "";
-  @type("string") coinSide: string = "heads";
+  @type("string") status: string;
+  @type("number") betAmount: number;
+  @type({ map: PlayerState }) players: MapSchema<PlayerState>;
+  @type("string") winner: string;
+  @type("string") coinSide: string;
 
   constructor() {
     super();
+    this.status = "waiting";
+    this.betAmount = 0;
+    this.players = new MapSchema<PlayerState>();
+    this.winner = "";
+    this.coinSide = "heads";
   }
 }
 
@@ -58,7 +67,12 @@ export class GameRoom extends Room<GameState> {
 
   onJoin(client: Client, options: { username: string; stars: number }) {
     const player = new PlayerState();
-    player.setup(client.sessionId, options.username, options.stars);
+    player.assign({
+      id: client.sessionId,
+      username: options.username,
+      stars: options.stars
+    });
+    
     this.state.players.set(client.sessionId, player);
 
     // If room is full, start the game

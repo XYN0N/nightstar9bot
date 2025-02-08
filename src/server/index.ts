@@ -125,71 +125,16 @@ app.post('/api/auth/initialize', verifyTelegramWebAppData, async (req, res) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // Check if user has started the bot
-    const hasStarted = await hasUserStartedBot(telegramUser.id);
-    if (!hasStarted) {
+    // Get session data
+    const session = await getOrCreateSession(telegramUser.id);
+    if (!session) {
       return res.status(401).json({ 
-        error: 'Please start the bot first by clicking the button below',
+        error: 'Please start the bot first',
         botUsername: process.env.BOT_USERNAME
       });
     }
 
-    // Get user profile photo
-    const photoUrl = await getUserProfilePhoto(telegramUser.id);
-
-    // Check if user is premium
-    let isPremium = false;
-    try {
-      const chatMember = await bot.api.getChatMember(telegramUser.id, telegramUser.id);
-      isPremium = chatMember.user.is_premium || false;
-    } catch (error) {
-      console.error('Error checking premium status:', error);
-    }
-
-    // Create or update user
-    const user = await User.findOneAndUpdate(
-      { telegramId: telegramUser.id },
-      {
-        $set: {
-          username: telegramUser.username || `user${telegramUser.id}`,
-          firstName: telegramUser.first_name,
-          lastName: telegramUser.last_name,
-          photoUrl,
-          isPremium,
-          lastActive: new Date()
-        },
-        $setOnInsert: {
-          stars: 100,
-          totalWins: 0,
-          totalLosses: 0,
-          totalEarnings: 0
-        }
-      },
-      { upsert: true, new: true }
-    );
-
-    // Create new session
-    const sessionData = {
-      id: user._id,
-      telegramId: user.telegramId,
-      username: user.username,
-      photoUrl: user.photoUrl,
-      stars: user.stars,
-      isPremium: user.isPremium,
-      totalWins: user.totalWins,
-      totalLosses: user.totalLosses,
-      totalEarnings: user.totalEarnings
-    };
-
-    // Store session in Redis
-    await redis.set(
-      `session:${telegramUser.id}`,
-      JSON.stringify(sessionData),
-      'EX',
-      86400 // 24 hours
-    );
-
-    res.json(sessionData);
+    res.json(session);
   } catch (error) {
     console.error('Error initializing user:', error);
     res.status(500).json({ error: 'Failed to initialize user' });
@@ -268,6 +213,25 @@ bot.command("start", async (ctx) => {
         }
       },
       { upsert: true, new: true }
+    );
+
+    // Create session immediately
+    const sessionData = {
+      telegramId: user.id,
+      username: user.username || `user${user.id}`,
+      photoUrl,
+      stars: 100,
+      isPremium,
+      totalWins: 0,
+      totalLosses: 0,
+      totalEarnings: 0
+    };
+
+    await redis.set(
+      `session:${user.id}`,
+      JSON.stringify(sessionData),
+      'EX',
+      86400 // 24 hours
     );
 
     // Send welcome message with web app button
