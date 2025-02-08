@@ -41,7 +41,9 @@ function App() {
 
         // Set up axios interceptor
         axios.interceptors.request.use((config) => {
-          config.headers['X-Telegram-Init-Data'] = initData;
+          if (config.headers) {
+            config.headers['X-Telegram-Init-Data'] = initData;
+          }
           return config;
         });
 

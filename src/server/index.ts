@@ -18,6 +18,9 @@ import crypto from 'crypto';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Important: Calculate the correct dist path
+const distPath = path.join(__dirname, '../../../dist');
+
 const app = express();
 const httpServer = createServer(app);
 
@@ -125,27 +128,6 @@ const verifyTelegramWebAppData = (req: express.Request, res: express.Response, n
 // Apply middleware to protected routes
 app.use('/api/*', verifyTelegramWebAppData);
 
-// Serve static files from the dist directory
-app.use(express.static(path.join(__dirname, '../../dist')));
-
-// Models
-const UserSchema = new mongoose.Schema({
-  telegramId: { type: Number, required: true, unique: true },
-  username: { type: String, required: true },
-  photoUrl: { type: String },
-  stars: { type: Number, default: 100 }, // Start with 100 stars
-  totalWins: { type: Number, default: 0 },
-  totalLosses: { type: Number, default: 0 },
-  totalEarnings: { type: Number, default: 0 },
-  badges: [String],
-  firstName: { type: String },
-  lastName: { type: String },
-  languageCode: { type: String },
-  lastActive: { type: Date, default: Date.now }
-});
-
-const User = mongoose.model('User', UserSchema);
-
 // API Routes
 app.post('/api/auth/initialize', async (req: express.Request, res: express.Response) => {
   try {
@@ -197,15 +179,33 @@ app.post('/api/auth/initialize', async (req: express.Request, res: express.Respo
   }
 });
 
-// Serve index.html for all other routes
+// IMPORTANT: Order of routes matters!
+// 1. API routes (already set up above)
+// 2. Colyseus monitor
+app.use('/colyseus', monitor());
+
+// 3. Static files
+app.use(express.static(distPath));
+
+// 4. Catch-all route - MUST be last
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../dist/index.html'));
+  // Log the requested path and the file we're trying to send
+  console.log('Requested path:', req.path);
+  console.log('Sending file:', path.join(distPath, 'index.html'));
+  
+  // Check if the file exists before sending
+  if (!fs.existsSync(path.join(distPath, 'index.html'))) {
+    console.error('Error: index.html not found in', distPath);
+    return res.status(404).send('File not found');
+  }
+  
+  res.sendFile(path.join(distPath, 'index.html'));
 });
 
 // Bot commands
 bot.command("start", async (ctx) => {
   try {
-    const webAppUrl = 'https://nightstar9bot-d607ada78002.herokuapp.com/';
+    const webAppUrl = process.env.APP_URL || 'https://nightstar9bot-d607ada78002.herokuapp.com/';
     await ctx.reply('Welcome to StarNight! 🌟\n\nClick the button below to start playing!', {
       reply_markup: {
         inline_keyboard: [[
@@ -231,4 +231,6 @@ bot.start().catch(err => {
 const port = Number(process.env.PORT) || 3000;
 httpServer.listen(port, () => {
   console.log(`Server running on port ${port}`);
+  // Log the dist path for debugging
+  console.log('Serving static files from:', distPath);
 });
