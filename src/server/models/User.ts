@@ -12,6 +12,7 @@ const UserSchema = new mongoose.Schema({
   totalEarnings: { type: Number, default: 0 },
   isPremium: { type: Boolean, default: false },
   lastActive: { type: Date, default: Date.now },
+  lastClaim: { type: Date },
   referralCode: { type: String, unique: true, sparse: true },
   referredBy: { type: Number, ref: 'User' }
 });

@@ -15,13 +15,26 @@ function Profile() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <img
-          src={user.photoUrl}
-          alt={user.username}
-          className="w-20 h-20 rounded-full"
-        />
+        {user.photoUrl ? (
+          <img
+            src={user.photoUrl}
+            alt={user.username}
+            className="w-20 h-20 rounded-full"
+          />
+        ) : (
+          <div className="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center text-2xl font-bold">
+            {user.username.charAt(0).toUpperCase()}
+          </div>
+        )}
         <div>
-          <h1 className="text-2xl font-bold">{user.username}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold">{user.username}</h1>
+            {user.isPremium && (
+              <span className="text-xs bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full">
+                Premium
+              </span>
+            )}
+          </div>
           <p className="text-gray-300">Level {earnedBadges}</p>
         </div>
       </div>

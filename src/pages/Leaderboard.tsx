@@ -5,8 +5,8 @@ import { getLeaderboard } from '../api/user';
 const MEDALS = ['🥇', '🥈', '🥉'];
 
 function Leaderboard() {
-  const { data: leaderboard, isLoading, error } = useQuery('leaderboard', getLeaderboard, {
-    refetchInterval: 30000 // Refresh every 30 seconds
+  const { data: leaderboard, isLoading } = useQuery('leaderboard', getLeaderboard, {
+    refetchInterval: 30000
   });
 
   if (isLoading) {
@@ -23,25 +23,14 @@ function Leaderboard() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold mb-2">Leaderboard</h1>
-          <p className="text-red-400">Failed to load leaderboard. Please try again later.</p>
-        </div>
-      </div>
-    );
-  }
-
   if (!leaderboard || leaderboard.length === 0) {
     return (
       <div className="space-y-6">
         <div className="text-center">
           <h1 className="text-3xl font-bold mb-2">Leaderboard</h1>
           <div className="p-8 bg-white/10 rounded-lg">
-            <Trophy className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-            <p className="text-gray-300">No players yet. Be the first to play!</p>
+            <Trophy className="w-12 h-12 mx-auto mb-4 text-yellow-400" />
+            <p className="text-gray-300">No games played yet. Be the first to play!</p>
           </div>
         </div>
       </div>
@@ -52,7 +41,7 @@ function Leaderboard() {
     <div className="space-y-6">
       <div className="text-center">
         <h1 className="text-3xl font-bold mb-2">Leaderboard</h1>
-        <p className="text-gray-300">Top 20 players by wins</p>
+        <p className="text-gray-300">Top players by wins</p>
       </div>
 
       <div className="space-y-4">
@@ -79,7 +68,7 @@ function Leaderboard() {
               <div className="flex items-center gap-2">
                 <p className="font-semibold">{entry.user.username}</p>
                 {entry.user.isPremium && (
-                  <span className="text-xs text-emerald-400">Premium</span>
+                  <span className="text-xs bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full">Premium</span>
                 )}
               </div>
               <p className="text-sm text-gray-300">
@@ -92,5 +81,3 @@ function Leaderboard() {
     </div>
   );
 }
-
-export default Leaderboard;

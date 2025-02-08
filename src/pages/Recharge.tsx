@@ -1,28 +1,51 @@
 import { Star, Gift } from 'lucide-react';
 import { useMutation, useQueryClient } from 'react-query';
-import axios from 'axios';
+import { earnStars } from '../api/user';
 import { User } from '../types';
+import WebApp from '@twa-dev/sdk';
 
 function Recharge() {
   const queryClient = useQueryClient();
   const userData = queryClient.getQueryData<User>('userData');
-
+  
   const earnStarsMutation = useMutation(
-    async () => {
-      const response = await axios.post('/api/stars/earn', { type: 'click' });
-      return response.data;
-    },
+    () => earnStars('click'),
     {
-      onSuccess: () => {
-        queryClient.invalidateQueries('userData');
+      onSuccess: (updatedUser) => {
+        queryClient.setQueryData('userData', updatedUser);
+        WebApp.showPopup({
+          title: 'Stars Earned!',
+          message: 'You earned 1 star. Come back tomorrow for more!',
+          buttons: [{ type: 'ok' }]
+        });
+      },
+      onError: () => {
+        WebApp.showPopup({
+          title: 'Error',
+          message: 'You can only claim stars once per day',
+          buttons: [{ type: 'ok' }]
+        });
       }
     }
   );
 
-  const handleCopyReferralLink = () => {
+  const handleCopyReferralLink = async () => {
     if (userData?.referralCode) {
-      const referralLink = `https://t.me/nightstar9/app?startapp=ref_${userData.referralCode}`;
-      navigator.clipboard.writeText(referralLink);
+      try {
+        const referralLink = `https://t.me/starnight9bot?start=ref_${userData.referralCode}`;
+        await navigator.clipboard.writeText(referralLink);
+        WebApp.showPopup({
+          title: 'Success!',
+          message: 'Referral link copied to clipboard',
+          buttons: [{ type: 'ok' }]
+        });
+      } catch (error) {
+        WebApp.showPopup({
+          title: 'Error',
+          message: 'Failed to copy referral link',
+          buttons: [{ type: 'ok' }]
+        });
+      }
     }
   };
 
@@ -36,15 +59,21 @@ function Recharge() {
       <div className="grid gap-4">
         <button
           onClick={() => earnStarsMutation.mutate()}
-          className="p-8 bg-white/10 rounded-xl hover:bg-white/20 transition-colors"
+          disabled={earnStarsMutation.isLoading}
+          className="p-8 bg-white/10 rounded-xl hover:bg-white/20 transition-colors relative overflow-hidden"
         >
           <div className="flex flex-col items-center gap-3">
             <Star className="w-16 h-16 text-yellow-400 animate-pulse" />
             <div className="text-center">
               <p className="text-lg font-semibold">Daily Reward</p>
-              <p className="text-sm text-gray-300">Click to claim your daily stars</p>
+              <p className="text-sm text-gray-300">Click to claim your daily star</p>
             </div>
           </div>
+          {earnStarsMutation.isLoading && (
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-2 border-white border-t-transparent"></div>
+            </div>
+          )}
         </button>
 
         <div className="p-6 bg-white/10 rounded-xl">
@@ -66,5 +95,3 @@ function Recharge() {
     </div>
   );
 }
-
-export default Recharge;
