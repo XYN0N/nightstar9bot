@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && tsc -p tsconfig.server.json",
+    "build": "tsc && vite build && tsc -p tsconfig.server.json && mkdir -p dist/server/config && cp src/config/*.js dist/server/config/",
     "start": "node dist/server/index.js",
     "lint": "eslint .",
     "preview": "vite preview"

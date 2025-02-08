@@ -11,5 +11,9 @@
     "types": ["node"],
     "allowJs": true
   },
-  "include": ["src/server/**/*", "src/config/**/*", "src/types/**/*"]
+  "include": ["src/server/**/*", "src/config/**/*", "src/types/**/*"],
+  "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": "node"
+  }
 }
