@@ -25,4 +25,12 @@ UserSchema.pre('save', function(next) {
   next();
 });
 
+// Add method to check if user can claim stars
+UserSchema.methods.canClaimStars = function() {
+  if (!this.lastClaim) return true;
+  
+  const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
+  return this.lastClaim < threeHoursAgo;
+};
+
 export const User = mongoose.model('User', UserSchema);

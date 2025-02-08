@@ -120,6 +120,59 @@ app.post('/api/auth/initialize', verifyTelegramWebAppData, async (req: Request, 
   }
 });
 
+// Add this new route for claiming stars
+app.post('/api/stars/claim', verifyTelegramWebAppData, async (req: Request, res: Response) => {
+  try {
+    const user = await User.findOne({ telegramId: req.telegramUser?.id });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (!user.canClaimStars()) {
+      return res.status(400).json({ 
+        error: 'You can only claim stars every 3 hours',
+        nextClaimTime: new Date(user.lastClaim.getTime() + 3 * 60 * 60 * 1000)
+      });
+    }
+
+    user.stars += 100;
+    user.lastClaim = new Date();
+    await user.save();
+
+    res.json(user);
+  } catch (error) {
+    console.error('Error claiming stars:', error);
+    res.status(500).json({ error: 'Failed to claim stars' });
+  }
+});
+
+// Update leaderboard route to sort by total earnings
+app.get('/api/leaderboard', async (req: Request, res: Response) => {
+  try {
+    const users = await User.find()
+      .sort({ totalEarnings: -1 })
+      .limit(50)
+      .select('username photoUrl totalWins totalEarnings isPremium');
+
+    const leaderboard = users.map((user, index) => ({
+      user: {
+        id: user._id,
+        username: user.username,
+        photoUrl: user.photoUrl,
+        totalWins: user.totalWins,
+        totalEarnings: user.totalEarnings,
+        isPremium: user.isPremium
+      },
+      rank: index + 1
+    }));
+
+    res.json(leaderboard);
+  } catch (error) {
+    console.error('Error fetching leaderboard:', error);
+    res.status(500).json({ error: 'Failed to fetch leaderboard' });
+  }
+});
+
 // Bot commands
 bot.command("start", async (ctx) => {
   try {

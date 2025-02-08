@@ -1,9 +1,7 @@
 import axios from 'axios';
 import { User, LeaderboardEntry } from '../types';
 
-// Create axios instance with base configuration
 const api = axios.create({
-  // In production, use the same origin (Heroku URL)
   baseURL: '/',
   withCredentials: true
 });
@@ -14,7 +12,6 @@ export async function getUserData(): Promise<User> {
     return response.data;
   } catch (error) {
     if (import.meta.env.DEV) {
-      // Return mock data in development
       return {
         id: 1,
         username: 'Test User',
@@ -38,6 +35,6 @@ export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
 }
 
 export async function earnStars(type: 'click' | 'referral'): Promise<User> {
-  const response = await api.post('/api/stars/earn', { type });
+  const response = await api.post('/api/stars/claim');
   return response.data;
 }

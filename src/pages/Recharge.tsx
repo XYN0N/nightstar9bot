@@ -1,12 +1,12 @@
 import { Star, Gift } from 'lucide-react';
-import { useMutation, useQueryClient } from 'react-query';
-import { earnStars } from '../api/user';
+import { useMutation, useQueryClient, useQuery } from 'react-query';
+import { earnStars, getUserData } from '../api/user';
 import { User } from '../types';
 import WebApp from '@twa-dev/sdk';
 
 export default function Recharge() {
   const queryClient = useQueryClient();
-  const userData = queryClient.getQueryData<User>('userData');
+  const { data: user } = useQuery('userData', getUserData);
   
   const earnStarsMutation = useMutation(
     () => earnStars('click'),
@@ -15,14 +15,25 @@ export default function Recharge() {
         queryClient.setQueryData('userData', updatedUser);
         WebApp.showPopup({
           title: 'Stars Earned!',
-          message: 'You earned 1 star. Come back tomorrow for more!',
+          message: 'You earned 100 stars. Come back in 3 hours for more!',
           buttons: [{ type: 'ok' }]
         });
       },
-      onError: () => {
+      onError: (error: any) => {
+        const nextClaimTime = error.response?.data?.nextClaimTime;
+        let timeLeft = '';
+        if (nextClaimTime) {
+          const minutes = Math.ceil((new Date(nextClaimTime).getTime() - Date.now()) / (1000 * 60));
+          if (minutes > 60) {
+            timeLeft = `${Math.floor(minutes / 60)} hours and ${minutes % 60} minutes`;
+          } else {
+            timeLeft = `${minutes} minutes`;
+          }
+        }
+
         WebApp.showPopup({
-          title: 'Error',
-          message: 'You can only claim stars once per day',
+          title: 'Not Yet Available',
+          message: timeLeft ? `You can claim more stars in ${timeLeft}` : 'You can claim stars every 3 hours',
           buttons: [{ type: 'ok' }]
         });
       }
@@ -65,8 +76,8 @@ export default function Recharge() {
           <div className="flex flex-col items-center gap-3">
             <Star className="w-16 h-16 text-yellow-400 animate-pulse" />
             <div className="text-center">
-              <p className="text-lg font-semibold">Daily Reward</p>
-              <p className="text-sm text-gray-300">Click to claim your daily star</p>
+              <p className="text-lg font-semibold">Free Stars</p>
+              <p className="text-sm text-gray-300">Claim 100 stars every 3 hours</p>
             </div>
           </div>
           {earnStarsMutation.isLoading && (

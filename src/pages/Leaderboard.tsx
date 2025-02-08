@@ -5,9 +5,24 @@ import { getLeaderboard } from '../api/user';
 const MEDALS = ['🥇', '🥈', '🥉'];
 
 export default function Leaderboard() {
-  const { data: leaderboard, isLoading } = useQuery('leaderboard', getLeaderboard, {
-    refetchInterval: 30000
+  const { data: leaderboard, isLoading, error } = useQuery('leaderboard', getLeaderboard, {
+    refetchInterval: 30000,
+    retry: 3,
+    staleTime: 60000
   });
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold mb-2">Leaderboard</h1>
+          <div className="p-8 bg-white/10 rounded-lg">
+            <p className="text-red-400">Failed to load leaderboard. Please try again.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -41,7 +56,7 @@ export default function Leaderboard() {
     <div className="space-y-6">
       <div className="text-center">
         <h1 className="text-3xl font-bold mb-2">Leaderboard</h1>
-        <p className="text-gray-300">Top players by wins</p>
+        <p className="text-gray-300">Top players by earnings</p>
       </div>
 
       <div className="space-y-4">
