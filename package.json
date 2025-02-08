@@ -39,7 +39,8 @@
     "colyseus.js": "^0.15.0",
     "grammy": "^1.21.1",
     "reflect-metadata": "^0.2.1",
-    "fs-extra": "^11.2.0"
+    "fs-extra": "^11.2.0",
+    "@types/fs-extra": "^11.0.4"
   },
   "devDependencies": {
     "@types/react": "^18.3.5",
