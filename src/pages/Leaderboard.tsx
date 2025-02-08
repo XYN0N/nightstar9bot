@@ -91,7 +91,7 @@ export default function Leaderboard() {
                 )}
               </div>
               <p className="text-sm text-gray-300">
-                {entry.user.totalWins} wins • {entry.user.totalEarnings} ⭐️ earned
+                {entry.user.totalWins} wins • {entry.user.totalEarnings} ⭐ earned
               </p>
             </div>
           </div>

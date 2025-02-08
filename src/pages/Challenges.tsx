@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Star, X, Users } from 'lucide-react';
 import { useMutation, useQuery } from 'react-query';
-import { findMatch } from '../api/game';
+import { findMatch, getActiveLobbies } from '../api/game';
 import { getUserData } from '../api/user';
 import WebApp from '@twa-dev/sdk';
 
@@ -13,7 +13,9 @@ function Challenges() {
   const [selectedAmount, setSelectedAmount] = React.useState<number | null>(null);
   const [searching, setSearching] = React.useState(false);
   const { data: user } = useQuery('userData', getUserData);
-  const [activeLobbies, setActiveLobbies] = React.useState([]);
+  const { data: activeLobbies } = useQuery('activeLobbies', getActiveLobbies, {
+    refetchInterval: 10000, // Refresh lobbies every 10 seconds
+  });
 
   const matchMutation = useMutation(findMatch, {
     onSuccess: (game) => {
@@ -31,7 +33,7 @@ function Challenges() {
 
   const handleFindMatch = () => {
     if (!selectedAmount) return;
-    
+
     if (!user || user.stars < selectedAmount) {
       WebApp.showPopup({
         title: 'Insufficient Stars',
@@ -117,14 +119,14 @@ function Challenges() {
           <h2 className="text-xl font-semibold">Active Lobbies</h2>
         </div>
         <div className="space-y-3">
-          {activeLobbies.length === 0 ? (
+          {activeLobbies?.length === 0 ? (
             <p className="text-center text-gray-400">No active lobbies found</p>
           ) : (
             activeLobbies.map((lobby: any) => (
               <div key={lobby.id} className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
                 <div>
                   <p className="font-semibold">{lobby.player1.username}</p>
-                  <p className="text-sm text-gray-400">{lobby.betAmount} ⭐️</p>
+                  <p className="text-sm text-gray-400">{lobby.betAmount} ⭐</p>
                 </div>
                 <button 
                   className="px-4 py-2 bg-blue-500 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
