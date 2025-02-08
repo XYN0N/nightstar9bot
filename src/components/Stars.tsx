@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient, useQuery } from 'react-query';
 import { earnStars, getUserData } from '../api/user';
-import { User } from '../types';
 import WebApp from '@twa-dev/sdk';
 import { Star } from 'lucide-react';
 

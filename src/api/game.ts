@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Game } from '../types';
+import { Game, Lobby } from '../types';
 
 // Get the API URL based on environment
 const api = axios.create({
@@ -23,4 +23,13 @@ export async function getGameStatus(gameId: string): Promise<Game> {
 
 export async function joinGame(gameId: string): Promise<void> {
   await api.post(`/api/game/${gameId}/join`);
+}
+
+export async function getActiveLobbies(): Promise<Lobby[]> {
+  const response = await api.get('/api/game/active-lobbies');
+  return response.data;
+}
+
+export async function joinLobby(lobbyId: string): Promise<void> {
+  await api.post(`/api/game/${lobbyId}/join`);
 }
