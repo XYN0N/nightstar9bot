@@ -1,21 +1,23 @@
+import { Server } from "@colyseus/core";
+import { WebSocketTransport } from "@colyseus/ws-transport";
+import { monitor } from "@colyseus/monitor";
+import { Bot } from "grammy";
 import express from 'express';
 import { createServer } from 'http';
-import { Server } from 'socket.io';
 import { Redis } from 'ioredis';
 import mongoose from 'mongoose';
-import TelegramBot from 'node-telegram-bot-api';
-import { TELEGRAM_BOT_TOKEN, ADMIN_ID } from '../config/telegram.js';
-import { REDIS_URL, MONGODB_URL } from '../config/database.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { GameRoom } from "./rooms/GameRoom.js";
+import { TELEGRAM_BOT_TOKEN, ADMIN_ID } from '../config/telegram.js';
+import { REDIS_URL, MONGODB_URL } from '../config/database.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
 const httpServer = createServer(app);
-const io = new Server(httpServer);
 const redis = new Redis(REDIS_URL);
 
 // Connect to MongoDB with retries
@@ -33,13 +35,55 @@ const connectWithRetry = () => {
 
 connectWithRetry();
 
-const bot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true });
+// Initialize Telegram bot with grammY
+const bot = new Bot(TELEGRAM_BOT_TOKEN);
+
+// Initialize Colyseus
+const gameServer = new Server({
+  transport: new WebSocketTransport({
+    server: httpServer
+  })
+});
+
+// Register game room
+gameServer.define("game", GameRoom);
 
 // Middleware
 app.use(express.json());
 
-// Serve static files from the dist directory
+// Middleware to verify and parse Telegram WebApp data
+const verifyTelegramWebAppData = (req, res, next) => {
+  const initData = req.headers['x-telegram-init-data'];
+  if (!initData) {
+    return res.status(401).json({ error: 'No Telegram data provided' });
+  }
+
+  try {
+    const data = Object.fromEntries(new URLSearchParams(initData));
+    if (!data.user) {
+      return res.status(401).json({ error: 'No user data found' });
+    }
+    req.telegramUser = JSON.parse(data.user);
+    next();
+  } catch (error) {
+    console.error('Error verifying Telegram data:', error);
+    res.status(401).json({ error: 'Invalid Telegram data' });
+  }
+};
+
+// Apply middleware to protected routes
+app.use('/api/*', verifyTelegramWebAppData);
+
+// Serve static files
 app.use(express.static(path.join(__dirname, '../../')));
+
+// Monitor endpoint (admin only)
+app.use("/colyseus", (req, res, next) => {
+  if (req.telegramUser?.id === ADMIN_ID) {
+    return monitor()(req, res, next);
+  }
+  res.status(403).json({ error: 'Unauthorized' });
+});
 
 // Models
 const UserSchema = new mongoose.Schema({
@@ -54,106 +98,22 @@ const UserSchema = new mongoose.Schema({
   firstName: { type: String },
   lastName: { type: String },
   languageCode: { type: String },
-  initData: { type: String },
   lastActive: { type: Date, default: Date.now }
 });
 
-const GameSchema = new mongoose.Schema({
-  player1: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  player2: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  betAmount: { type: Number, required: true },
-  status: { type: String, enum: ['waiting', 'playing', 'finished'], default: 'waiting' },
-  winner: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  coinSide: { type: String, enum: ['heads', 'tails'] },
-  createdAt: { type: Date, default: Date.now },
-});
-
 const User = mongoose.model('User', UserSchema);
-const Game = mongoose.model('Game', GameSchema);
 
 // API Routes
-app.get('/api/user', async (req, res) => {
-  const telegramId = req.headers['x-telegram-id'];
-  if (!telegramId) return res.status(401).json({ error: 'Unauthorized' });
-
-  const user = await User.findOne({ telegramId });
-  if (!user) return res.status(404).json({ error: 'User not found' });
-
-  res.json(user);
-});
-
-app.get('/api/leaderboard', async (req, res) => {
-  const users = await User.find()
-    .sort({ totalEarnings: -1 })
-    .limit(10);
-
-  res.json(users.map((user, index) => ({ user, rank: index + 1 })));
-});
-
-app.post('/api/game/match', async (req, res) => {
-  const { betAmount } = req.body;
-  const telegramId = req.headers['x-telegram-id'];
-  if (!telegramId) return res.status(401).json({ error: 'Unauthorized' });
-
-  const user = await User.findOne({ telegramId });
-  if (!user) return res.status(404).json({ error: 'User not found' });
-  if (user.stars < betAmount) return res.status(400).json({ error: 'Insufficient stars' });
-
-  let game = await Game.findOne({ status: 'waiting', betAmount })
-    .populate('player1')
-    .populate('player2');
-
-  if (!game) {
-    game = new Game({
-      player1: user._id,
-      betAmount,
-    });
-    await game.save();
-  } else {
-    game.player2 = user._id;
-    game.status = 'playing';
-    game.coinSide = Math.random() < 0.5 ? 'heads' : 'tails';
-    await game.save();
-
-    io.to(`game:${game._id}`).emit('gameStart', game);
-  }
-
-  res.json(game);
-});
-
-app.get('/api/game/:id', async (req, res) => {
-  const game = await Game.findById(req.params.id)
-    .populate('player1')
-    .populate('player2')
-    .populate('winner');
-
-  if (!game) return res.status(404).json({ error: 'Game not found' });
-  res.json(game);
-});
-
-// Serve React app for all other routes
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../index.html'));
-});
-
-// Socket.IO
-io.on('connection', (socket) => {
-  socket.on('joinGame', (gameId) => {
-    socket.join(`game:${gameId}`);
-  });
-});
-
-// Telegram Bot Commands
-bot.onText(/\/start/, async (msg) => {
-  const chatId = msg.chat.id;
+app.post('/api/auth/initialize', async (req, res) => {
   try {
-    // Get user profile photos
+    const telegramUser = req.telegramUser;
+    
+    // Get user profile photo
     let photoUrl = '';
     try {
-      const photos = await bot.getUserProfilePhotos(msg.from?.id || chatId);
-      if (photos.photos.length > 0) {
-        const fileId = photos.photos[0][0].file_id;
-        const file = await bot.getFile(fileId);
+      const userInfo = await bot.api.getUserProfilePhotos(telegramUser.id);
+      if (userInfo.photos.length > 0) {
+        const file = await bot.api.getFile(userInfo.photos[0][0].file_id);
         photoUrl = `https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${file.file_path}`;
       }
     } catch (error) {
@@ -162,81 +122,55 @@ bot.onText(/\/start/, async (msg) => {
 
     // Create or update user
     const userData = {
-      telegramId: chatId,
-      username: msg.from?.username || 'Anonymous',
-      firstName: msg.from?.first_name,
-      lastName: msg.from?.last_name,
-      languageCode: msg.from?.language_code,
+      telegramId: telegramUser.id,
+      username: telegramUser.username || 'Anonymous',
+      firstName: telegramUser.first_name,
+      lastName: telegramUser.last_name,
+      languageCode: telegramUser.language_code,
       photoUrl,
-      lastActive: new Date(),
-      initData: msg.web_app_data?.data || ''
+      lastActive: new Date()
     };
 
     const user = await User.findOneAndUpdate(
-      { telegramId: chatId },
-      { $set: userData },
+      { telegramId: telegramUser.id },
+      { 
+        $set: userData,
+        $setOnInsert: { stars: 100 }
+      },
       { upsert: true, new: true }
     );
 
-    // Send welcome message with web app link
-    const webAppUrl = 'https://nightstar9bot-d607ada78002.herokuapp.com/';
-    const keyboard = {
-      inline_keyboard: [
-        [{
-          text: '🎮 Play Now',
-          web_app: { url: webAppUrl }
-        }]
-      ]
-    };
-
-    const welcomeMessage = user.stars === 0 
-      ? `Welcome to StarNight! 🌟\n\nGet ready to challenge other players and win stars! You'll receive 100 stars to start playing.`
-      : `Welcome back to StarNight! 🌟\n\nYou have ${user.stars} stars. Ready to play?`;
-
-    await bot.sendMessage(chatId, welcomeMessage, {
-      reply_markup: keyboard,
-      parse_mode: 'HTML'
-    });
-
-    // Give initial stars to new users
-    if (user.stars === 0) {
-      user.stars = 100;
-      await user.save();
-      await bot.sendMessage(chatId, '🎁 You received 100 stars! Use them wisely!');
-    }
-
+    res.json(user);
   } catch (error) {
-    console.error('Error in /start command:', error);
-    bot.sendMessage(chatId, 'Sorry, there was an error. Please try again later.');
+    console.error('Error initializing user:', error);
+    res.status(500).json({ error: 'Failed to initialize user' });
   }
 });
 
-// General message handler
-bot.on('message', async (msg) => {
-  if (msg.text?.startsWith('/')) return; // Skip command messages
-
-  const chatId = msg.chat.id;
+// Bot commands
+bot.command("start", async (ctx) => {
   try {
-    const user = await User.findOne({ telegramId: chatId });
-    if (!user) {
-      bot.sendMessage(chatId, 'Please use /start to begin playing!');
-    }
+    const webAppUrl = 'https://nightstar9bot-d607ada78002.herokuapp.com/';
+    await ctx.reply('Welcome to StarNight! 🌟\n\nClick the button below to start playing!', {
+      reply_markup: {
+        inline_keyboard: [[
+          {
+            text: '🎮 Play Now',
+            web_app: { url: webAppUrl }
+          }
+        ]]
+      }
+    });
   } catch (error) {
-    console.error('Error handling message:', error);
+    console.error('Error in start command:', error);
+    await ctx.reply('Sorry, there was an error. Please try again later.');
   }
 });
 
-// Error handling for bot polling
-bot.on('polling_error', (error) => {
-  console.log('Bot polling error:', error);
-  bot.stopPolling();
-  setTimeout(() => {
-    bot.startPolling();
-  }, 10000);
-});
+// Start bot
+bot.start();
 
 // Start server
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+gameServer.listen(PORT);
+console.log(`Server running on port ${PORT}`);

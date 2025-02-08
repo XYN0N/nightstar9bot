@@ -15,67 +15,61 @@ import axios from 'axios';
 const queryClient = new QueryClient();
 
 function App() {
-  const [isTelegram, setIsTelegram] = React.useState(false);
-  const [isInitialized, setIsInitialized] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    try {
-      // Initialize Telegram WebApp
-      WebApp.ready();
-      setIsTelegram(true);
-
-      // Set up axios interceptor to include Telegram user data
-      axios.interceptors.request.use((config) => {
-        const initData = WebApp.initData;
-        if (initData) {
-          config.headers['X-Telegram-Init-Data'] = initData;
-          // Extract user ID from initData and add it as a header
-          try {
-            const data = Object.fromEntries(new URLSearchParams(initData));
-            if (data.user) {
-              const user = JSON.parse(data.user);
-              config.headers['X-Telegram-ID'] = user.id;
-            }
-          } catch (e) {
-            console.error('Error parsing Telegram init data:', e);
+    const initializeApp = async () => {
+      try {
+        // Initialize Telegram WebApp
+        WebApp.ready();
+        
+        // Set up axios interceptor to include Telegram user data
+        axios.interceptors.request.use((config) => {
+          const initData = WebApp.initData;
+          if (initData) {
+            config.headers['X-Telegram-Init-Data'] = initData;
           }
-        }
-        return config;
-      });
+          return config;
+        });
 
-      setIsInitialized(true);
-    } catch (e) {
-      console.error('Error initializing Telegram WebApp:', e);
-      setIsTelegram(false);
-      setIsInitialized(true);
-    }
+        // Initialize user profile
+        await axios.post('/api/auth/initialize');
+        
+        setIsLoading(false);
+      } catch (e) {
+        console.error('Error initializing app:', e);
+        setError('Unable to initialize app. Please try again.');
+        setIsLoading(false);
+      }
+    };
+
+    initializeApp();
   }, []);
 
-  if (!isInitialized) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 to-purple-900 text-white flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent mx-auto"></div>
-          <p className="mt-4">Loading...</p>
+          <p className="mt-4">Loading your profile...</p>
         </div>
       </div>
     );
   }
 
-  if (!isTelegram) {
+  if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 to-purple-900 text-white flex items-center justify-center">
         <div className="text-center p-8">
-          <h1 className="text-4xl font-bold mb-4">⭐️ StarNight</h1>
-          <p className="text-xl">This app is only available through Telegram.</p>
-          <a 
-            href="https://t.me/starnight9bot" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="mt-6 inline-block px-6 py-3 bg-blue-500 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
+          <h1 className="text-4xl font-bold mb-4">⭐️ Error</h1>
+          <p className="text-xl mb-4">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 bg-blue-500 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
           >
-            Open in Telegram
-          </a>
+            Try Again
+          </button>
         </div>
       </div>
     );
