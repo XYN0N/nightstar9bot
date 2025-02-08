@@ -223,7 +223,9 @@ bot.command("start", async (ctx) => {
 });
 
 // Start bot
-bot.start();
+bot.start().catch(err => {
+  console.error('Error starting bot:', err);
+});
 
 // Start server
 const port = Number(process.env.PORT) || 3000;

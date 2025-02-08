@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { WebApp } from '@twa-dev/sdk';
 import Home from './pages/Home';
@@ -17,20 +17,29 @@ const queryClient = new QueryClient();
 function App() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [isTelegram, setIsTelegram] = React.useState(false);
 
   React.useEffect(() => {
     const initializeApp = async () => {
       try {
+        // Check if we're in Telegram
+        const isTelegramWebApp = window.Telegram?.WebApp || false;
+        setIsTelegram(!!isTelegramWebApp);
+
+        if (!isTelegramWebApp) {
+          throw new Error('This app is only available through Telegram.');
+        }
+
         // Initialize Telegram WebApp
         WebApp.ready();
         
-        // Verify we have initData
+        // Get initData
         const initData = WebApp.initData;
         if (!initData) {
           throw new Error('No Telegram data available. Please open this app through Telegram.');
         }
 
-        // Set up axios interceptor to include Telegram user data
+        // Set up axios interceptor
         axios.interceptors.request.use((config) => {
           config.headers['X-Telegram-Init-Data'] = initData;
           return config;
@@ -42,7 +51,7 @@ function App() {
           throw new Error('Failed to initialize user profile');
         }
 
-        // Store user data in query client
+        // Store user data
         queryClient.setQueryData('userData', response.data);
         
         setIsLoading(false);
@@ -55,6 +64,25 @@ function App() {
 
     initializeApp();
   }, []);
+
+  if (!isTelegram) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 to-purple-900 text-white flex items-center justify-center">
+        <div className="text-center p-8">
+          <h1 className="text-4xl font-bold mb-4">⭐️ StarNight</h1>
+          <p className="text-xl mb-6">This app is only available through Telegram.</p>
+          <a 
+            href="https://t.me/starnight9bot"
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="px-6 py-3 bg-blue-500 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
+          >
+            Open in Telegram
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -96,6 +124,7 @@ function App() {
             <Route path="recharge" element={<Recharge />} />
             <Route path="leaderboard" element={<Leaderboard />} />
             <Route path="admin" element={<AdminPanel />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>
       </BrowserRouter>
