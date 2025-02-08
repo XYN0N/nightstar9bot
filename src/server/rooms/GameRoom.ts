@@ -36,8 +36,9 @@ export class GameRoom extends Room<GameState> {
   maxClients = 2;
 
   onCreate(options: { betAmount: number }) {
-    this.setState(new GameState());
-    this.state.betAmount = options.betAmount;
+    const state = new GameState();
+    state.betAmount = options.betAmount;
+    this.setState(state);
 
     this.onMessage("ready", (client) => {
       const player = this.state.players.get(client.sessionId);

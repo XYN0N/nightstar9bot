@@ -270,10 +270,11 @@ bot.command("start", async (ctx) => {
       { upsert: true, new: true }
     );
 
-    const webAppUrl = process.env.APP_URL || 'https://t.me/starnight9bot/app';
+    // IMPORTANT: The web app URL must be a valid HTTPS URL
+    const webAppUrl = 'https://nightstar9bot-d607ada78002.herokuapp.com';
     
     await ctx.reply(
-      `Welcome to StarNight! 🌟\n\nYour account has been created with 100 stars to start playing!\n\nClick the button below to start playing!`,
+      'Welcome to StarNight! 🌟\n\nClick the button below to start playing!',
       {
         reply_markup: {
           inline_keyboard: [[
