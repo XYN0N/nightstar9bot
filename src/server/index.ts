@@ -33,19 +33,30 @@ const __dirname = dirname(__filename);
 
 const app = express();
 const httpServer = createServer(app);
-const redis = new Redis(REDIS_URL);
 
-// Connect to MongoDB with retries
+// Initialize Redis with retry strategy
+const redis = new Redis(REDIS_URL, {
+  retryStrategy(times) {
+    const delay = Math.min(times * 50, 2000);
+    return delay;
+  }
+});
+
+// Connect to MongoDB with retries and options
 const connectWithRetry = () => {
-  mongoose.connect(MONGODB_URL)
-    .then(() => {
-      console.log('MongoDB connected successfully');
-    })
-    .catch((err) => {
-      console.error('MongoDB connection error:', err);
-      console.log('Retrying in 5 seconds...');
-      setTimeout(connectWithRetry, 5000);
-    });
+  mongoose.connect(MONGODB_URL, {
+    serverSelectionTimeoutMS: 5000,
+    socketTimeoutMS: 45000,
+    family: 4, // Force IPv4
+  })
+  .then(() => {
+    console.log('MongoDB connected successfully');
+  })
+  .catch((err) => {
+    console.error('MongoDB connection error:', err);
+    console.log('Retrying in 5 seconds...');
+    setTimeout(connectWithRetry, 5000);
+  });
 };
 
 connectWithRetry();
@@ -89,8 +100,8 @@ const verifyTelegramWebAppData = (req: Request, res: Response, next: NextFunctio
 // Apply middleware to protected routes
 app.use('/api/*', verifyTelegramWebAppData);
 
-// Serve static files
-app.use(express.static(path.join(__dirname, '../../')));
+// Serve static files from the dist directory
+app.use(express.static(path.join(__dirname, '../../dist')));
 
 // Monitor endpoint (admin only)
 app.use("/colyseus", (req: Request, res: Response, next: NextFunction) => {
@@ -165,6 +176,11 @@ app.post('/api/auth/initialize', async (req: Request, res: Response) => {
   }
 });
 
+// Serve React app for all other routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../../dist/index.html'));
+});
+
 // Bot commands
 bot.command("start", async (ctx) => {
   try {
@@ -189,6 +205,6 @@ bot.command("start", async (ctx) => {
 bot.start();
 
 // Start server
-const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 gameServer.listen(port);
 console.log(`Server running on port ${port}`);
