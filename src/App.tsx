@@ -30,33 +30,55 @@ function AuthenticatedApp() {
   React.useEffect(() => {
     const initializeApp = async () => {
       try {
-        // Initialize WebApp
-        if (window.Telegram?.WebApp) {
-          window.Telegram.WebApp.ready();
-          window.Telegram.WebApp.expand();
-
-          // Set up axios interceptor for Telegram data
-          axios.interceptors.request.use((config) => {
-            if (config.headers) {
-              config.headers['X-Telegram-Init-Data'] = window.Telegram.WebApp.initData;
-              if (window.Telegram.WebApp.initDataUnsafe?.user) {
-                config.headers['X-Telegram-User'] = JSON.stringify(window.Telegram.WebApp.initDataUnsafe.user);
-              }
-            }
-            return config;
-          });
-
-          // Initialize user session
-          const response = await axios.post('/api/auth/initialize');
-          if (response.data) {
-            queryClient.setQueryData('userData', response.data);
-            setIsLoading(false);
-            navigate('/home', { replace: true });
-            return;
-          }
+        // Check if we're in Telegram WebApp
+        if (!window.Telegram?.WebApp) {
+          setError('Please open this app through Telegram');
+          setIsLoading(false);
+          return;
         }
 
-        setError('Please open this app through Telegram');
+        // Initialize WebApp
+        window.Telegram.WebApp.ready();
+        window.Telegram.WebApp.expand();
+
+        // Get initData and user data
+        const initData = window.Telegram.WebApp.initData;
+        const userData = window.Telegram.WebApp.initDataUnsafe?.user;
+
+        if (!initData || !userData) {
+          setError('Invalid Telegram data');
+          setIsLoading(false);
+          return;
+        }
+
+        // Set up axios interceptors
+        axios.interceptors.request.use((config) => {
+          if (config.headers) {
+            config.headers['X-Telegram-Init-Data'] = initData;
+            config.headers['X-Telegram-User'] = JSON.stringify(userData);
+          }
+          return config;
+        });
+
+        // Check session status first
+        const sessionResponse = await axios.get('/api/auth/session');
+        if (sessionResponse.data) {
+          queryClient.setQueryData('userData', sessionResponse.data);
+          setIsLoading(false);
+          navigate('/home', { replace: true });
+          return;
+        }
+
+        // If no session, initialize user
+        const initResponse = await axios.post('/api/auth/initialize');
+        if (initResponse.data) {
+          queryClient.setQueryData('userData', initResponse.data);
+          setIsLoading(false);
+          navigate('/home', { replace: true });
+          return;
+        }
+
+        setError('Failed to initialize user data');
         setIsLoading(false);
       } catch (e: any) {
         console.error('Error initializing app:', e);
@@ -88,7 +110,7 @@ function AuthenticatedApp() {
           <p className="text-xl mb-6">{error}</p>
           {error.includes('start the bot') ? (
             <a 
-              href="https://t.me/starnight9bot?start=webapp"
+              href={`https://t.me/${process.env.BOT_USERNAME}?start=webapp`}
               target="_blank"
               rel="noopener noreferrer"
               className="px-6 py-3 bg-blue-500 rounded-lg font-semibold hover:bg-blue-600 transition-colors inline-flex items-center gap-2"
@@ -97,7 +119,7 @@ function AuthenticatedApp() {
             </a>
           ) : (
             <a 
-              href="https://t.me/starnight9bot"
+              href={`https://t.me/${process.env.BOT_USERNAME}`}
               target="_blank"
               rel="noopener noreferrer"
               className="px-6 py-3 bg-blue-500 rounded-lg font-semibold hover:bg-blue-600 transition-colors inline-flex items-center gap-2"
