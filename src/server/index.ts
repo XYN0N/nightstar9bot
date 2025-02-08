@@ -2,7 +2,7 @@ import { Server } from "@colyseus/core";
 import { WebSocketTransport } from "@colyseus/ws-transport";
 import { monitor } from "@colyseus/monitor";
 import { Bot } from "grammy";
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import { createServer } from 'http';
 import { Redis } from 'ioredis';
 import mongoose from 'mongoose';
@@ -12,6 +12,21 @@ import { dirname } from 'path';
 import { GameRoom } from "./rooms/GameRoom.js";
 import { TELEGRAM_BOT_TOKEN, ADMIN_ID } from '../config/telegram.js';
 import { REDIS_URL, MONGODB_URL } from '../config/database.js';
+
+// Extend Express Request type to include telegramUser
+declare global {
+  namespace Express {
+    interface Request {
+      telegramUser?: {
+        id: number;
+        username?: string;
+        first_name?: string;
+        last_name?: string;
+        language_code?: string;
+      }
+    }
+  }
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -52,14 +67,14 @@ gameServer.define("game", GameRoom);
 app.use(express.json());
 
 // Middleware to verify and parse Telegram WebApp data
-const verifyTelegramWebAppData = (req, res, next) => {
+const verifyTelegramWebAppData = (req: Request, res: Response, next: NextFunction) => {
   const initData = req.headers['x-telegram-init-data'];
   if (!initData) {
     return res.status(401).json({ error: 'No Telegram data provided' });
   }
 
   try {
-    const data = Object.fromEntries(new URLSearchParams(initData));
+    const data = Object.fromEntries(new URLSearchParams(initData as string));
     if (!data.user) {
       return res.status(401).json({ error: 'No user data found' });
     }
@@ -78,7 +93,7 @@ app.use('/api/*', verifyTelegramWebAppData);
 app.use(express.static(path.join(__dirname, '../../')));
 
 // Monitor endpoint (admin only)
-app.use("/colyseus", (req, res, next) => {
+app.use("/colyseus", (req: Request, res: Response, next: NextFunction) => {
   if (req.telegramUser?.id === ADMIN_ID) {
     return monitor()(req, res, next);
   }
@@ -104,9 +119,12 @@ const UserSchema = new mongoose.Schema({
 const User = mongoose.model('User', UserSchema);
 
 // API Routes
-app.post('/api/auth/initialize', async (req, res) => {
+app.post('/api/auth/initialize', async (req: Request, res: Response) => {
   try {
     const telegramUser = req.telegramUser;
+    if (!telegramUser) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
     
     // Get user profile photo
     let photoUrl = '';
@@ -171,6 +189,6 @@ bot.command("start", async (ctx) => {
 bot.start();
 
 // Start server
-const PORT = process.env.PORT || 3000;
-gameServer.listen(PORT);
-console.log(`Server running on port ${PORT}`);
+const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+gameServer.listen(port);
+console.log(`Server running on port ${port}`);
