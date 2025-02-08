@@ -29,62 +29,68 @@ function TelegramAuthCheck({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     const initializeApp = async () => {
       try {
-        // Get Telegram WebApp instance safely
-        const twa = window.Telegram?.WebApp;
-        
-        // Initialize Telegram WebApp
-        if (twa) {
-          try {
-            if (!twa.isExpanded) {
-              twa.expand();
-            }
-            twa.ready();
-          } catch (e) {
-            console.warn('WebApp initialization warning:', e);
-          }
-
-          // Get user data from WebApp
-          const initData = twa.initData;
-          const userData = twa.initDataUnsafe?.user;
-
-          if (!userData) {
-            setError('No user data available. Please open this app through Telegram.');
-            setIsLoading(false);
-            return;
-          }
-
-          // Set up axios interceptor for Telegram data
-          axios.interceptors.request.use((config) => {
-            if (config.headers) {
-              config.headers['X-Telegram-Init-Data'] = initData;
-              config.headers['X-Telegram-User'] = JSON.stringify(userData);
-            }
-            return config;
-          });
-
-          // Check session status
-          const sessionResponse = await axios.get('/api/auth/session');
-          if (sessionResponse.data) {
-            queryClient.setQueryData('userData', sessionResponse.data);
-            setIsLoading(false);
-            return;
-          }
-
-          // If no session, try to initialize
-          const response = await axios.post('/api/auth/initialize');
-          if (response.data) {
-            queryClient.setQueryData('userData', response.data);
-            setIsLoading(false);
-            return;
-          }
-
-          setError('Failed to initialize user data');
-          setIsLoading(false);
-        } else {
-          // If not in Telegram WebApp, show error
+        // Check if we're in Telegram
+        if (typeof window !== 'undefined' && !window.Telegram?.WebApp) {
           setError('Please open this app through Telegram');
           setIsLoading(false);
+          return;
         }
+
+        // Get Telegram WebApp instance safely
+        const twa = window.Telegram?.WebApp;
+        if (!twa) {
+          throw new Error('Telegram WebApp not available');
+        }
+
+        // Initialize Telegram WebApp
+        try {
+          if (!twa.isExpanded) {
+            twa.expand();
+          }
+          twa.ready();
+        } catch (e) {
+          console.warn('WebApp initialization warning:', e);
+        }
+
+        // Get user data from WebApp
+        const initData = twa.initData;
+        const userData = twa.initDataUnsafe?.user;
+
+        if (!userData) {
+          setError('No user data available. Please open this app through Telegram.');
+          setIsLoading(false);
+          return;
+        }
+
+        // Set up axios interceptor for Telegram data
+        axios.interceptors.request.use((config) => {
+          if (config.headers) {
+            config.headers['X-Telegram-Init-Data'] = initData;
+            config.headers['X-Telegram-User'] = JSON.stringify(userData);
+          }
+          return config;
+        });
+
+        // Check session status
+        const sessionResponse = await axios.get('/api/auth/session');
+        if (sessionResponse.data) {
+          queryClient.setQueryData('userData', sessionResponse.data);
+          setIsLoading(false);
+          navigate('/'); // Redirect to home after successful auth
+          return;
+        }
+
+        // If no session, try to initialize
+        const response = await axios.post('/api/auth/initialize');
+        if (response.data) {
+          queryClient.setQueryData('userData', response.data);
+          setIsLoading(false);
+          navigate('/'); // Redirect to home after initialization
+          return;
+        }
+
+        setError('Failed to initialize user data');
+        setIsLoading(false);
       } catch (e: any) {
         console.error('Error initializing app:', e);
         if (e.response?.data?.error?.includes('start the bot')) {
@@ -157,4 +163,4 @@ function App() {
   );
 }
 
-export default App;
+export default App
