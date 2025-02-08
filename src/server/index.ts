@@ -104,7 +104,9 @@ function validateTelegramWebAppData(initData: string): boolean {
 // Middleware to verify and parse Telegram WebApp data
 const verifyTelegramWebAppData = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const initData = req.headers['x-telegram-init-data'] as string;
-  if (!initData) {
+  const userData = req.headers['x-telegram-user'];
+  
+  if (!initData || !userData) {
     return res.status(401).json({ error: 'Please open this app through Telegram' });
   }
 
@@ -114,12 +116,12 @@ const verifyTelegramWebAppData = (req: express.Request, res: express.Response, n
       return res.status(401).json({ error: 'Invalid Telegram data' });
     }
 
-    const data = Object.fromEntries(new URLSearchParams(initData));
-    if (!data.user) {
-      return res.status(401).json({ error: 'No user data found' });
+    // Parse and validate user data
+    const user = JSON.parse(userData as string);
+    if (!user || !user.id) {
+      return res.status(401).json({ error: 'Invalid user data' });
     }
 
-    const user = JSON.parse(data.user);
     req.telegramUser = user;
     next();
   } catch (error) {

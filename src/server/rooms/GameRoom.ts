@@ -1,50 +1,44 @@
 import { Room, Client } from "@colyseus/core";
 import { Schema, type, MapSchema } from "@colyseus/schema";
 
-export class PlayerState extends Schema {
-  @type("string")
-  id = "";
-
-  @type("string")
-  username = "";
-
-  @type("number")
-  stars = 0;
-
-  @type("boolean")
-  ready = false;
+class PlayerState extends Schema {
+  @type("string") id: string;
+  @type("string") username: string;
+  @type("number") stars: number;
+  @type("boolean") ready: boolean;
 
   constructor(id: string, username: string, stars: number) {
     super();
     this.id = id;
     this.username = username;
     this.stars = stars;
+    this.ready = false;
   }
 }
 
-export class GameState extends Schema {
-  @type("string")
-  status = "waiting";
+class GameState extends Schema {
+  @type("string") status: string;
+  @type("number") betAmount: number;
+  @type({ map: PlayerState }) players = new MapSchema<PlayerState>();
+  @type("string") winner: string;
+  @type("string") coinSide: string;
 
-  @type("number")
-  betAmount = 0;
-
-  @type({ map: PlayerState })
-  players = new MapSchema<PlayerState>();
-
-  @type("string")
-  winner = "";
-
-  @type("string")
-  coinSide = "heads";
+  constructor() {
+    super();
+    this.status = "waiting";
+    this.betAmount = 0;
+    this.winner = "";
+    this.coinSide = "";
+  }
 }
 
 export class GameRoom extends Room<GameState> {
   maxClients = 2;
 
   onCreate(options: { betAmount: number }) {
-    this.setState(new GameState());
-    this.state.betAmount = options.betAmount;
+    const state = new GameState();
+    state.betAmount = options.betAmount;
+    this.setState(state);
 
     this.onMessage("ready", (client) => {
       const player = this.state.players.get(client.sessionId);
