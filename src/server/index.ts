@@ -181,6 +181,97 @@ app.post('/api/auth/initialize', async (req: express.Request, res: express.Respo
   }
 });
 
+// Add new route for earning stars
+app.post('/api/stars/earn', verifyTelegramWebAppData, async (req, res) => {
+  try {
+    const { type } = req.body;
+    const telegramUser = req.telegramUser;
+    
+    if (!telegramUser) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    let starsToAdd = 0;
+    switch (type) {
+      case 'click':
+        starsToAdd = 1;
+        break;
+      case 'referral':
+        starsToAdd = 100;
+        break;
+      default:
+        return res.status(400).json({ error: 'Invalid earn type' });
+    }
+
+    // Update user's stars in database
+    const user = await User.findOneAndUpdate(
+      { telegramId: telegramUser.id },
+      { $inc: { stars: starsToAdd } },
+      { new: true }
+    );
+
+    res.json(user);
+  } catch (error) {
+    console.error('Error earning stars:', error);
+    res.status(500).json({ error: 'Failed to earn stars' });
+  }
+});
+
+// Add route for leaderboard
+app.get('/api/leaderboard', verifyTelegramWebAppData, async (req, res) => {
+  try {
+    const leaderboard = await User.find({})
+      .sort({ totalWins: -1, totalEarnings: -1 })
+      .limit(20)
+      .select('username photoUrl totalWins totalEarnings isPremium');
+
+    res.json(leaderboard);
+  } catch (error) {
+    console.error('Error fetching leaderboard:', error);
+    res.status(500).json({ error: 'Failed to fetch leaderboard' });
+  }
+});
+
+// Add route for game matchmaking
+app.post('/api/game/find-match', verifyTelegramWebAppData, async (req, res) => {
+  try {
+    const { betAmount } = req.body;
+    const telegramUser = req.telegramUser;
+
+    if (!telegramUser) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Find a waiting game or create a new one
+    const waitingGame = await Game.findOne({
+      status: 'waiting',
+      betAmount,
+      player2: null
+    });
+
+    if (waitingGame) {
+      // Join existing game
+      waitingGame.player2 = telegramUser.id;
+      waitingGame.status = 'playing';
+      await waitingGame.save();
+      return res.json(waitingGame);
+    }
+
+    // Create new game
+    const newGame = new Game({
+      player1: telegramUser.id,
+      betAmount,
+      status: 'waiting'
+    });
+    await newGame.save();
+
+    res.json(newGame);
+  } catch (error) {
+    console.error('Error finding match:', error);
+    res.status(500).json({ error: 'Failed to find match' });
+  }
+});
+
 // IMPORTANT: Order of routes matters!
 // 1. API routes (already set up above)
 // 2. Colyseus monitor
