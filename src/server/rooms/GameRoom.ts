@@ -15,12 +15,11 @@ class PlayerState extends Schema {
     this.ready = false;
   }
 
-  assign(data: { id: string; username: string; stars: number }) {
+  setup(data: { id: string; username: string; stars: number }) {
     this.id = data.id;
     this.username = data.username;
     this.stars = data.stars;
     this.ready = false;
-    return this;
   }
 }
 
@@ -66,7 +65,8 @@ export class GameRoom extends Room<GameState> {
   }
 
   onJoin(client: Client, options: { username: string; stars: number }) {
-    const player = new PlayerState().assign({
+    const player = new PlayerState();
+    player.setup({
       id: client.sessionId,
       username: options.username,
       stars: options.stars
