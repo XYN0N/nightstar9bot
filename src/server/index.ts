@@ -13,6 +13,7 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import fs from 'fs-extra';
 import cors from 'cors';
+import { createHmac } from 'crypto';
 import { GameRoom } from "./rooms/GameRoom.js";
 import { TELEGRAM_BOT_TOKEN, ADMIN_ID } from '../config/telegram.js';
 import { REDIS_URL, MONGODB_URL } from '../config/database.js';
@@ -93,11 +94,11 @@ function validateTelegramWebAppData(initData: string): boolean {
       .join('\n');
     
     // Calculate HMAC-SHA256
-    const secret = crypto.createHmac('sha256', 'WebAppData')
+    const secret = createHmac('sha256', 'WebAppData')
       .update(TELEGRAM_BOT_TOKEN)
       .digest();
     
-    const calculatedHash = crypto.createHmac('sha256', secret)
+    const calculatedHash = createHmac('sha256', secret)
       .update(params)
       .digest('hex');
     
