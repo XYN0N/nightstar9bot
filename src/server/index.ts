@@ -6,18 +6,41 @@ import mongoose from 'mongoose';
 import TelegramBot from 'node-telegram-bot-api';
 import { TELEGRAM_BOT_TOKEN, ADMIN_ID } from '../config/telegram';
 import { REDIS_URL, MONGODB_URL } from '../config/database';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer);
 const redis = new Redis(REDIS_URL);
-const bot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true });
 
-// Connect to MongoDB
-mongoose.connect(MONGODB_URL);
+// Connect to MongoDB with retries
+const connectWithRetry = () => {
+  mongoose.connect(MONGODB_URL, {
+    serverSelectionTimeoutMS: 5000,
+    retryWrites: true,
+    w: 'majority'
+  })
+  .then(() => {
+    console.log('MongoDB connected successfully');
+  })
+  .catch((err) => {
+    console.error('MongoDB connection error:', err);
+    console.log('Retrying in 5 seconds...');
+    setTimeout(connectWithRetry, 5000);
+  });
+};
+
+connectWithRetry();
+
+const bot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true });
 
 // Middleware
 app.use(express.json());
+app.use(express.static(path.join(__dirname, '../../dist')));
 
 // Models
 const UserSchema = new mongoose.Schema({
@@ -72,7 +95,6 @@ app.post('/api/game/match', async (req, res) => {
   if (!user) return res.status(404).json({ error: 'User not found' });
   if (user.stars < betAmount) return res.status(400).json({ error: 'Insufficient stars' });
 
-  // Find waiting game or create new one
   let game = await Game.findOne({ status: 'waiting', betAmount })
     .populate('player1')
     .populate('player2');
@@ -89,7 +111,6 @@ app.post('/api/game/match', async (req, res) => {
     game.coinSide = Math.random() < 0.5 ? 'heads' : 'tails';
     await game.save();
 
-    // Notify players
     io.to(`game:${game._id}`).emit('gameStart', game);
   }
 
@@ -104,6 +125,11 @@ app.get('/api/game/:id', async (req, res) => {
 
   if (!game) return res.status(404).json({ error: 'Game not found' });
   res.json(game);
+});
+
+// Serve React app for all other routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../../dist/index.html'));
 });
 
 // Socket.IO
@@ -128,6 +154,16 @@ bot.on('message', async (msg) => {
     await newUser.save();
     bot.sendMessage(chatId, 'Welcome to StarNight! 🌟');
   }
+});
+
+// Error handling for bot polling
+bot.on('polling_error', (error) => {
+  console.log('Bot polling error:', error);
+  // Restart polling after error
+  bot.stopPolling();
+  setTimeout(() => {
+    bot.startPolling();
+  }, 10000);
 });
 
 // Start server
