@@ -4,7 +4,7 @@ import { getLeaderboard } from '../api/user';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
 
-function Leaderboard() {
+export default function Leaderboard() {
   const { data: leaderboard, isLoading } = useQuery('leaderboard', getLeaderboard, {
     refetchInterval: 30000
   });

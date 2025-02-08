@@ -4,7 +4,7 @@ import { earnStars } from '../api/user';
 import { User } from '../types';
 import WebApp from '@twa-dev/sdk';
 
-function Recharge() {
+export default function Recharge() {
   const queryClient = useQueryClient();
   const userData = queryClient.getQueryData<User>('userData');
   
