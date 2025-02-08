@@ -2,10 +2,10 @@ import { Room, Client } from "@colyseus/core";
 import { Schema, type, MapSchema } from "@colyseus/schema";
 
 class PlayerState extends Schema {
-  @type("string") id: string;
-  @type("string") username: string;
-  @type("number") stars: number;
-  @type("boolean") ready: boolean;
+  @type("string") id!: string;
+  @type("string") username!: string;
+  @type("number") stars!: number;
+  @type("boolean") ready!: boolean;
 
   constructor() {
     super();
@@ -17,17 +17,16 @@ class PlayerState extends Schema {
 }
 
 class GameState extends Schema {
-  @type("string") status: string;
-  @type("number") betAmount: number;
-  @type({ map: PlayerState }) players: MapSchema<PlayerState>;
-  @type("string") winner: string;
-  @type("string") coinSide: string;
+  @type("string") status!: string;
+  @type("number") betAmount!: number;
+  @type({ map: PlayerState }) players = new MapSchema<PlayerState>();
+  @type("string") winner!: string;
+  @type("string") coinSide!: string;
 
   constructor() {
     super();
     this.status = "waiting";
     this.betAmount = 0;
-    this.players = new MapSchema<PlayerState>();
     this.winner = "";
     this.coinSide = "heads";
   }
@@ -37,8 +36,9 @@ export class GameRoom extends Room<GameState> {
   maxClients = 2;
 
   onCreate(options: { betAmount: number }) {
-    this.setState(new GameState());
-    this.state.betAmount = options.betAmount;
+    const state = new GameState();
+    state.betAmount = options.betAmount;
+    this.setState(state);
 
     this.onMessage("ready", (client) => {
       const player = this.state.players.get(client.sessionId);

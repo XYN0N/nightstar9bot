@@ -16,7 +16,7 @@ import { TELEGRAM_BOT_TOKEN, ADMIN_ID } from '../config/telegram.js';
 import { REDIS_URL, MONGODB_URL } from '../config/database.js';
 import { User } from './models/User.js';
 import { Game } from './models/Game.js';
-import crypto from 'crypto';
+import { verifyTelegramWebAppData } from './middleware/auth.js';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -77,11 +77,36 @@ app.use(express.json());
 // Serve static files
 app.use(express.static(distPath));
 
+// API Routes
+app.use('/api/*', verifyTelegramWebAppData);
+
+// Bot commands
+bot.command("start", async (ctx) => {
+  try {
+    const webAppUrl = process.env.APP_URL || 'https://nightstar9bot-d607ada78002.herokuapp.com/';
+    await ctx.reply('Welcome to StarNight! 🌟\n\nClick the button below to start playing!', {
+      reply_markup: {
+        inline_keyboard: [[
+          {
+            text: '🎮 Play Now',
+            web_app: { url: webAppUrl }
+          }
+        ]]
+      }
+    });
+  } catch (error) {
+    console.error('Error in start command:', error);
+    await ctx.reply('Sorry, there was an error. Please try again later.');
+  }
+});
+
 // Colyseus monitor
 app.use('/colyseus', monitor());
 
-// API Routes
-app.use('/api/*', verifyTelegramWebAppData);
+// Catch-all route for SPA
+app.get('*', (req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'));
+});
 
 // Start bot
 bot.start().catch(err => {
