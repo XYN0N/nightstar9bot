@@ -37,7 +37,7 @@ const bot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true });
 
 // Middleware
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '../../dist')));
+app.use(express.static(path.join(__dirname, '../../')));
 
 // Models
 const UserSchema = new mongoose.Schema({
@@ -64,7 +64,7 @@ const GameSchema = new mongoose.Schema({
 const User = mongoose.model('User', UserSchema);
 const Game = mongoose.model('Game', GameSchema);
 
-// Routes
+// API Routes
 app.get('/api/user', async (req, res) => {
   const telegramId = req.headers['x-telegram-id'];
   if (!telegramId) return res.status(401).json({ error: 'Unauthorized' });
@@ -126,7 +126,7 @@ app.get('/api/game/:id', async (req, res) => {
 
 // Serve React app for all other routes
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../dist/index.html'));
+  res.sendFile(path.join(__dirname, '../../index.html'));
 });
 
 // Socket.IO
@@ -143,7 +143,6 @@ bot.on('message', async (msg) => {
     const user = await User.findOne({ telegramId: chatId });
 
     if (!user) {
-      // Get user profile photos
       let photoUrl = '';
       try {
         const photos = await bot.getUserProfilePhotos(msg.from?.id || chatId);
@@ -172,7 +171,6 @@ bot.on('message', async (msg) => {
 // Error handling for bot polling
 bot.on('polling_error', (error) => {
   console.log('Bot polling error:', error);
-  // Restart polling after error
   bot.stopPolling();
   setTimeout(() => {
     bot.startPolling();
