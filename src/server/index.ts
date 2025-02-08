@@ -15,21 +15,6 @@ import { TELEGRAM_BOT_TOKEN, ADMIN_ID } from '../config/telegram.js';
 import { REDIS_URL, MONGODB_URL } from '../config/database.js';
 import crypto from 'crypto';
 
-// Extend Express Request type to include telegramUser
-declare global {
-  namespace Express {
-    interface Request {
-      telegramUser?: {
-        id: number;
-        username?: string;
-        first_name?: string;
-        last_name?: string;
-        language_code?: string;
-      }
-    }
-  }
-}
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -84,6 +69,8 @@ function validateTelegramWebAppData(initData: string): boolean {
   try {
     const urlParams = new URLSearchParams(initData);
     const hash = urlParams.get('hash');
+    if (!hash) return false;
+    
     urlParams.delete('hash');
     
     // Sort parameters alphabetically
@@ -112,13 +99,13 @@ function validateTelegramWebAppData(initData: string): boolean {
 const verifyTelegramWebAppData = (req: Request, res: Response, next: NextFunction) => {
   const initData = req.headers['x-telegram-init-data'] as string;
   if (!initData) {
-    return res.status(401).json({ error: 'No Telegram data provided' });
+    return res.status(401).json({ error: 'Please open this app through Telegram' });
   }
 
   try {
     // Validate the data
     if (!validateTelegramWebAppData(initData)) {
-      return res.status(401).json({ error: 'Invalid Telegram data signature' });
+      return res.status(401).json({ error: 'Invalid Telegram data' });
     }
 
     const data = Object.fromEntries(new URLSearchParams(initData));
@@ -126,7 +113,8 @@ const verifyTelegramWebAppData = (req: Request, res: Response, next: NextFunctio
       return res.status(401).json({ error: 'No user data found' });
     }
 
-    req.telegramUser = JSON.parse(data.user);
+    const user = JSON.parse(data.user);
+    req.telegramUser = user;
     next();
   } catch (error) {
     console.error('Error verifying Telegram data:', error);
@@ -139,14 +127,6 @@ app.use('/api/*', verifyTelegramWebAppData);
 
 // Serve static files from the dist directory
 app.use(express.static(path.join(__dirname, '../../../dist')));
-
-// Monitor endpoint (admin only)
-app.use("/colyseus", (req: Request, res: Response, next: NextFunction) => {
-  if (req.telegramUser?.id === ADMIN_ID) {
-    return monitor()(req, res, next);
-  }
-  res.status(403).json({ error: 'Unauthorized' });
-});
 
 // Models
 const UserSchema = new mongoose.Schema({
@@ -173,7 +153,7 @@ app.post('/api/auth/initialize', async (req: Request, res: Response) => {
     if (!telegramUser) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
-    
+
     // Get user profile photo
     let photoUrl = '';
     try {
@@ -206,36 +186,15 @@ app.post('/api/auth/initialize', async (req: Request, res: Response) => {
       { upsert: true, new: true }
     );
 
+    // Store session in Redis
+    const sessionKey = `session:${telegramUser.id}`;
+    await redis.set(sessionKey, JSON.stringify(user), 'EX', 86400); // 24 hours
+
     res.json(user);
   } catch (error) {
     console.error('Error initializing user:', error);
     res.status(500).json({ error: 'Failed to initialize user' });
   }
-});
-
-// Get user data
-app.get('/api/user', async (req: Request, res: Response) => {
-  try {
-    const telegramUser = req.telegramUser;
-    if (!telegramUser) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const user = await User.findOne({ telegramId: telegramUser.id });
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    res.json(user);
-  } catch (error) {
-    console.error('Error getting user data:', error);
-    res.status(500).json({ error: 'Failed to get user data' });
-  }
-});
-
-// Serve React app for all other routes
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../../dist/index.html'));
 });
 
 // Bot commands
@@ -262,6 +221,6 @@ bot.command("start", async (ctx) => {
 bot.start();
 
 // Start server
-const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+const port = process.env.PORT || 3000;
 gameServer.listen(port);
 console.log(`Server running on port ${port}`);

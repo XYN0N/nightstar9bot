@@ -24,35 +24,31 @@ function App() {
         // Initialize Telegram WebApp
         WebApp.ready();
         
+        // Verify we have initData
+        const initData = WebApp.initData;
+        if (!initData) {
+          throw new Error('No Telegram data available. Please open this app through Telegram.');
+        }
+
         // Set up axios interceptor to include Telegram user data
         axios.interceptors.request.use((config) => {
-          const initData = WebApp.initData;
-          if (initData) {
-            config.headers['X-Telegram-Init-Data'] = initData;
-            // Try to parse user data from initData
-            try {
-              const data = Object.fromEntries(new URLSearchParams(initData));
-              if (data.user) {
-                const user = JSON.parse(data.user);
-                config.headers['X-Telegram-User-ID'] = user.id;
-              }
-            } catch (e) {
-              console.error('Error parsing Telegram init data:', e);
-            }
-          }
+          config.headers['X-Telegram-Init-Data'] = initData;
           return config;
         });
 
-        // Initialize user profile
+        // Initialize user session
         const response = await axios.post('/api/auth/initialize');
         if (!response.data) {
           throw new Error('Failed to initialize user profile');
         }
+
+        // Store user data in query client
+        queryClient.setQueryData('userData', response.data);
         
         setIsLoading(false);
       } catch (e: any) {
         console.error('Error initializing app:', e);
-        setError(e.response?.data?.error || 'Unable to initialize app. Please try again.');
+        setError(e.response?.data?.error || e.message || 'Unable to initialize app. Please try again.');
         setIsLoading(false);
       }
     };
