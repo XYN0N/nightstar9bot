@@ -10,18 +10,7 @@ import Recharge from './pages/Recharge';
 import Leaderboard from './pages/Leaderboard';
 import AdminPanel from './pages/AdminPanel';
 import Layout from './components/Layout';
-
-declare global {
-  interface Window {
-    Telegram?: {
-      WebApp: {
-        ready: () => void;
-        expand: () => void;
-        initData: string;
-      };
-    };
-  }
-}
+import WebApp from '@twa-dev/sdk';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -48,20 +37,12 @@ function App() {
           return;
         }
 
-        // Check if we're in Telegram WebApp
-        const twa = window.Telegram?.WebApp;
-        if (!twa) {
-          setError('Please open this app through Telegram');
-          setIsLoading(false);
-          return;
-        }
-
         // Initialize Telegram WebApp
-        twa.ready();
-        twa.expand();
+        WebApp.ready();
+        WebApp.expand();
 
         // Set up headers for API requests
-        axios.defaults.headers.common['X-Telegram-Init-Data'] = twa.initData;
+        axios.defaults.headers.common['X-Telegram-Init-Data'] = WebApp.initData;
 
         // Initialize user session
         const response = await axios.post('/api/auth/initialize');
@@ -112,7 +93,22 @@ function App() {
   }
 
   if (!isAuthenticated && !import.meta.env.DEV) {
-    return null;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 to-purple-900 text-white flex items-center justify-center">
+        <div className="text-center p-8">
+          <h1 className="text-4xl font-bold mb-4">⭐️ StarNight</h1>
+          <p className="text-xl mb-6">Please open this app through Telegram</p>
+          <a 
+            href="https://t.me/starnight9bot"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-6 py-3 bg-blue-500 rounded-lg font-semibold hover:bg-blue-600 transition-colors inline-flex items-center gap-2"
+          >
+            Open in Telegram
+          </a>
+        </div>
+      </div>
+    );
   }
 
   return (

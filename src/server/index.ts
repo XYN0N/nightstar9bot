@@ -155,12 +155,12 @@ bot.command("start", async (ctx) => {
     const webAppUrl = process.env.APP_URL || 'https://nightstar9bot-d607ada78002.herokuapp.com/';
     await ctx.reply('Welcome to StarNight! 🌟\n\nClick the button below to start playing!', {
       reply_markup: {
-        keyboard: [[{
-          text: '🎮 Play StarNight',
-          web_app: { url: webAppUrl }
-        }]],
-        resize_keyboard: true,
-        persistent: true
+        inline_keyboard: [[
+          {
+            text: '🎮 Play StarNight',
+            web_app: { url: webAppUrl }
+          }
+        ]]
       }
     });
   } catch (error) {
