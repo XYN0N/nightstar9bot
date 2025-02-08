@@ -14,11 +14,11 @@ export default function Leaderboard() {
     }
   });
 
-  console.log("Leaderboard data:", leaderboard); // Debug
+  console.log("Leaderboard data:", leaderboard); // DEBUG
 
   if (error) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 bg-gray-900 p-4 rounded-lg">
         <div className="text-center">
           <h1 className="text-3xl font-bold mb-2 text-white">Leaderboard</h1>
           <div className="p-8 bg-gray-800 rounded-lg">
@@ -32,7 +32,7 @@ export default function Leaderboard() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 bg-gray-900 p-4 rounded-lg">
         <div className="text-center">
           <h1 className="text-3xl font-bold mb-2 text-white">Leaderboard</h1>
           <div className="flex items-center justify-center gap-2">
@@ -46,7 +46,7 @@ export default function Leaderboard() {
 
   if (!leaderboard || leaderboard.length === 0) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 bg-gray-900 p-4 rounded-lg">
         <div className="text-center">
           <h1 className="text-3xl font-bold mb-2 text-white">Leaderboard</h1>
           <div className="p-8 bg-gray-800 rounded-lg">
@@ -59,7 +59,7 @@ export default function Leaderboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-gray-900 p-4 rounded-lg">
       <div className="text-center">
         <h1 className="text-3xl font-bold mb-2 text-white">Leaderboard</h1>
         <p className="text-gray-300">Top players by earnings</p>
@@ -68,10 +68,10 @@ export default function Leaderboard() {
       <div className="space-y-4">
         {leaderboard.map((entry, index) => (
           <div
-            key={entry?.user?.id || index} // Evita errori se user è undefined
+            key={entry?.user?.id || index} // Evita crash se user è undefined
             className="flex items-center gap-4 p-4 bg-gray-800 rounded-lg"
           >
-            <div className="text-2xl font-bold w-8">
+            <div className="text-2xl font-bold w-8 text-white">
               {index < 3 ? MEDALS[index] : index + 1}
             </div>
             {entry?.user?.photoUrl ? (
@@ -81,13 +81,13 @@ export default function Leaderboard() {
                 className="w-12 h-12 rounded-full"
               />
             ) : (
-              <div className="w-12 h-12 rounded-full bg-gray-600 flex items-center justify-center text-lg font-bold">
+              <div className="w-12 h-12 rounded-full bg-gray-600 flex items-center justify-center text-lg font-bold text-white">
                 {entry?.user?.username?.charAt(0).toUpperCase() || "?"}
               </div>
             )}
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <p className="font-semibold">{entry?.user?.username || "Unknown"}</p>
+                <p className="font-semibold text-white">{entry?.user?.username || "Unknown"}</p>
                 {entry?.user?.isPremium && (
                   <span className="text-xs bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full">Premium</span>
                 )}
