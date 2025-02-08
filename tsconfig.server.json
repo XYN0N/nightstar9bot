@@ -16,7 +16,8 @@
     "sourceMap": true,
     "types": ["node"],
     "typeRoots": ["./node_modules/@types", "./src/server/types"],
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "preserveSymlinks": true
   },
   "include": ["src/server/**/*", "src/config/**/*", "src/types/**/*"],
   "exclude": ["node_modules", "dist"]

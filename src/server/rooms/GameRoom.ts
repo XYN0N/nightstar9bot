@@ -1,6 +1,6 @@
 import { Room, Client } from "@colyseus/core";
 import { Schema, type, MapSchema } from "@colyseus/schema";
-import { User } from '../models/User';
+import { User } from '../models/User.js';
 
 class PlayerState extends Schema {
   @type("string") id: string;
