@@ -51,6 +51,11 @@ const UserSchema = new mongoose.Schema({
   totalLosses: { type: Number, default: 0 },
   totalEarnings: { type: Number, default: 0 },
   badges: [String],
+  firstName: { type: String },
+  lastName: { type: String },
+  languageCode: { type: String },
+  initData: { type: String },
+  lastActive: { type: Date, default: Date.now }
 });
 
 const GameSchema = new mongoose.Schema({
@@ -138,32 +143,83 @@ io.on('connection', (socket) => {
   });
 });
 
-// Telegram Bot
+// Telegram Bot Commands
+bot.onText(/\/start/, async (msg) => {
+  const chatId = msg.chat.id;
+  try {
+    // Get user profile photos
+    let photoUrl = '';
+    try {
+      const photos = await bot.getUserProfilePhotos(msg.from?.id || chatId);
+      if (photos.photos.length > 0) {
+        const fileId = photos.photos[0][0].file_id;
+        const file = await bot.getFile(fileId);
+        photoUrl = `https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${file.file_path}`;
+      }
+    } catch (error) {
+      console.error('Error getting profile photo:', error);
+    }
+
+    // Create or update user
+    const userData = {
+      telegramId: chatId,
+      username: msg.from?.username || 'Anonymous',
+      firstName: msg.from?.first_name,
+      lastName: msg.from?.last_name,
+      languageCode: msg.from?.language_code,
+      photoUrl,
+      lastActive: new Date(),
+      initData: msg.web_app_data?.data || ''
+    };
+
+    const user = await User.findOneAndUpdate(
+      { telegramId: chatId },
+      { $set: userData },
+      { upsert: true, new: true }
+    );
+
+    // Send welcome message with web app link
+    const webAppUrl = 'https://nightstar9bot-d607ada78002.herokuapp.com/';
+    const keyboard = {
+      inline_keyboard: [
+        [{
+          text: '🎮 Play Now',
+          web_app: { url: webAppUrl }
+        }]
+      ]
+    };
+
+    const welcomeMessage = user.stars === 0 
+      ? `Welcome to StarNight! 🌟\n\nGet ready to challenge other players and win stars! You'll receive 100 stars to start playing.`
+      : `Welcome back to StarNight! 🌟\n\nYou have ${user.stars} stars. Ready to play?`;
+
+    await bot.sendMessage(chatId, welcomeMessage, {
+      reply_markup: keyboard,
+      parse_mode: 'HTML'
+    });
+
+    // Give initial stars to new users
+    if (user.stars === 0) {
+      user.stars = 100;
+      await user.save();
+      await bot.sendMessage(chatId, '🎁 You received 100 stars! Use them wisely!');
+    }
+
+  } catch (error) {
+    console.error('Error in /start command:', error);
+    bot.sendMessage(chatId, 'Sorry, there was an error. Please try again later.');
+  }
+});
+
+// General message handler
 bot.on('message', async (msg) => {
+  if (msg.text?.startsWith('/')) return; // Skip command messages
+
   const chatId = msg.chat.id;
   try {
     const user = await User.findOne({ telegramId: chatId });
-
     if (!user) {
-      let photoUrl = '';
-      try {
-        const photos = await bot.getUserProfilePhotos(msg.from?.id || chatId);
-        if (photos.photos.length > 0) {
-          const fileId = photos.photos[0][0].file_id;
-          photoUrl = fileId;
-        }
-      } catch (error) {
-        console.error('Error getting profile photo:', error);
-      }
-
-      const newUser = new User({
-        telegramId: chatId,
-        username: msg.from?.username || 'Anonymous',
-        photoUrl,
-        stars: 0,
-      });
-      await newUser.save();
-      bot.sendMessage(chatId, 'Welcome to StarNight! 🌟');
+      bot.sendMessage(chatId, 'Please use /start to begin playing!');
     }
   } catch (error) {
     console.error('Error handling message:', error);
