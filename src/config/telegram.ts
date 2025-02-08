@@ -1,9 +1,9 @@
 // Environment variables
-export const TELEGRAM_BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN || '';
-export const ADMIN_ID = parseInt(import.meta.env.VITE_ADMIN_ID || '506336274', 10);
-export const GOOGLE_WALLET_API_KEY = import.meta.env.VITE_GOOGLE_WALLET_API_KEY || '';
-export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
-export const GOOGLE_CLIENT_SECRET = import.meta.env.VITE_GOOGLE_CLIENT_SECRET || '';
+export const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
+export const ADMIN_ID = parseInt(process.env.ADMIN_ID || '506336274', 10);
+export const GOOGLE_WALLET_API_KEY = process.env.GOOGLE_WALLET_API_KEY || '';
+export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+export const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 
 // Star package configurations
 export const STAR_PACKAGES = [

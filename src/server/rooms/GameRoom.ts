@@ -2,10 +2,10 @@ import { Room, Client } from "@colyseus/core";
 import { Schema, type, MapSchema } from "@colyseus/schema";
 
 class PlayerState extends Schema {
-  @type("string") id!: string;
-  @type("string") username!: string;
-  @type("number") stars!: number;
-  @type("boolean") ready!: boolean;
+  @type("string") id: string;
+  @type("string") username: string;
+  @type("number") stars: number;
+  @type("boolean") ready: boolean;
 
   constructor() {
     super();
@@ -14,21 +14,14 @@ class PlayerState extends Schema {
     this.stars = 0;
     this.ready = false;
   }
-
-  initialize(id: string, username: string, stars: number) {
-    this.id = id;
-    this.username = username;
-    this.stars = stars;
-    this.ready = false;
-  }
 }
 
 class GameState extends Schema {
-  @type("string") status!: string;
-  @type("number") betAmount!: number;
+  @type("string") status: string;
+  @type("number") betAmount: number;
   @type({ map: PlayerState }) players = new MapSchema<PlayerState>();
-  @type("string") winner!: string;
-  @type("string") coinSide!: string;
+  @type("string") winner: string;
+  @type("string") coinSide: string;
 
   constructor() {
     super();
@@ -43,9 +36,8 @@ export class GameRoom extends Room<GameState> {
   maxClients = 2;
 
   onCreate(options: { betAmount: number }) {
-    const state = new GameState();
-    state.betAmount = options.betAmount;
-    this.setState(state);
+    this.setState(new GameState());
+    this.state.betAmount = options.betAmount;
 
     this.onMessage("ready", (client) => {
       const player = this.state.players.get(client.sessionId);
@@ -67,7 +59,11 @@ export class GameRoom extends Room<GameState> {
 
   onJoin(client: Client, options: { username: string; stars: number }) {
     const player = new PlayerState();
-    player.initialize(client.sessionId, options.username, options.stars);
+    player.id = client.sessionId;
+    player.username = options.username;
+    player.stars = options.stars;
+    player.ready = false;
+    
     this.state.players.set(client.sessionId, player);
 
     // If room is full, start the game
