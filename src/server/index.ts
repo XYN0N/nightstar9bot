@@ -8,9 +8,10 @@ import { TELEGRAM_BOT_TOKEN, ADMIN_ID } from '../config/telegram.js';
 import { REDIS_URL, MONGODB_URL } from '../config/database.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = dirname(__filename);
 
 const app = express();
 const httpServer = createServer(app);
