@@ -15,6 +15,7 @@ import { GameRoom } from "./rooms/GameRoom.js";
 import { TELEGRAM_BOT_TOKEN, ADMIN_ID } from '../config/telegram.js';
 import { REDIS_URL, MONGODB_URL } from '../config/database.js';
 import { User } from './models/User.js';
+import { Game } from './models/Game.js';
 import crypto from 'crypto';
 
 const __filename = fileURLToPath(import.meta.url);
