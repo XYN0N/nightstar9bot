@@ -1,8 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Star, X } from 'lucide-react';
-import { useMutation } from 'react-query';
+import { useMutation, useQuery } from 'react-query';
 import { findMatch } from '../api/game';
+import { getUserData } from '../api/user';
+import WebApp from '@twa-dev/sdk';
 
 const BET_AMOUNTS = [15, 50, 100];
 
@@ -10,18 +12,34 @@ function Challenges() {
   const navigate = useNavigate();
   const [selectedAmount, setSelectedAmount] = React.useState<number | null>(null);
   const [searching, setSearching] = React.useState(false);
+  const { data: user } = useQuery('userData', getUserData);
 
   const matchMutation = useMutation(findMatch, {
     onSuccess: (game) => {
       navigate(`/game/${game.id}`);
     },
-    onError: () => {
+    onError: (error: any) => {
       setSearching(false);
+      WebApp.showPopup({
+        title: 'Error',
+        message: error.response?.data?.error || 'Failed to find match',
+        buttons: [{ type: 'ok' }]
+      });
     }
   });
 
   const handleFindMatch = () => {
     if (!selectedAmount) return;
+    
+    if (!user || user.stars < selectedAmount) {
+      WebApp.showPopup({
+        title: 'Insufficient Stars',
+        message: 'You don\'t have enough stars for this bet',
+        buttons: [{ type: 'ok' }]
+      });
+      return;
+    }
+
     setSearching(true);
     matchMutation.mutate(selectedAmount);
   };
@@ -38,17 +56,25 @@ function Challenges() {
         <p className="text-gray-300">Select bet amount and find opponents</p>
       </div>
 
+      <div className="p-4 bg-white/10 rounded-lg">
+        <p className="text-center">Your Stars: <span className="font-bold text-yellow-400">{user?.stars || 0}</span></p>
+      </div>
+
       <div className="grid grid-cols-3 gap-4">
         {BET_AMOUNTS.map((amount) => (
           <button
             key={amount}
             onClick={() => setSelectedAmount(amount)}
-            disabled={searching}
+            disabled={searching || (user?.stars || 0) < amount}
             className={`p-6 rounded-xl flex flex-col items-center gap-2 transition-colors ${
               selectedAmount === amount
                 ? 'bg-yellow-400 text-black'
                 : 'bg-white/10 hover:bg-white/20'
-            } ${searching ? 'opacity-50 cursor-not-allowed' : ''}`}
+            } ${
+              searching || (user?.stars || 0) < amount 
+                ? 'opacity-50 cursor-not-allowed' 
+                : ''
+            }`}
           >
             <Star
               className={`w-8 h-8 ${
@@ -77,7 +103,7 @@ function Challenges() {
       ) : (
         <button
           onClick={handleFindMatch}
-          disabled={!selectedAmount}
+          disabled={!selectedAmount || (user?.stars || 0) < (selectedAmount || 0)}
           className="w-full p-4 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Find Match
