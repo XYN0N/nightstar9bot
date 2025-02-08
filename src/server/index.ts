@@ -149,6 +149,31 @@ const verifyTelegramWebAppData = (req: express.Request, res: express.Response, n
 // Apply middleware to protected routes
 app.use('/api/*', verifyTelegramWebAppData);
 
+// Bot commands
+bot.command("start", async (ctx) => {
+  try {
+    const webAppUrl = process.env.APP_URL || 'https://nightstar9bot-d607ada78002.herokuapp.com/';
+    await ctx.reply('Welcome to StarNight! 🌟\n\nClick the button below to start playing!', {
+      reply_markup: {
+        keyboard: [[{
+          text: '🎮 Play StarNight',
+          web_app: { url: webAppUrl }
+        }]],
+        resize_keyboard: true,
+        persistent: true
+      }
+    });
+  } catch (error) {
+    console.error('Error in start command:', error);
+    await ctx.reply('Sorry, there was an error. Please try again later.');
+  }
+});
+
+// Start bot
+bot.start().catch(err => {
+  console.error('Error starting bot:', err);
+});
+
 // API Routes
 app.post('/api/auth/initialize', async (req: express.Request, res: express.Response) => {
   try {
@@ -211,31 +236,6 @@ app.use(express.static(distPath));
 // 4. Catch-all route - MUST be last
 app.get('*', (req, res) => {
   res.sendFile(path.join(distPath, 'index.html'));
-});
-
-// Bot commands
-bot.command("start", async (ctx) => {
-  try {
-    const webAppUrl = process.env.APP_URL || 'https://nightstar9bot-d607ada78002.herokuapp.com/';
-    await ctx.reply('Welcome to StarNight! 🌟\n\nClick the button below to start playing!', {
-      reply_markup: {
-        inline_keyboard: [[
-          {
-            text: '🎮 Play Now',
-            web_app: { url: webAppUrl }
-          }
-        ]]
-      }
-    });
-  } catch (error) {
-    console.error('Error in start command:', error);
-    await ctx.reply('Sorry, there was an error. Please try again later.');
-  }
-});
-
-// Start bot
-bot.start().catch(err => {
-  console.error('Error starting bot:', err);
 });
 
 // Start server
