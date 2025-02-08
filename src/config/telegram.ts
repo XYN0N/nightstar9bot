@@ -1,4 +1,3 @@
-// Use process.env for server-side code
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const ADMIN_ID = Number(process.env.ADMIN_ID) || 506336274;
 const GOOGLE_WALLET_API_KEY = process.env.GOOGLE_WALLET_API_KEY || '';
