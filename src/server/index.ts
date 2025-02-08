@@ -146,10 +146,22 @@ bot.on('message', async (msg) => {
     const user = await User.findOne({ telegramId: chatId });
 
     if (!user) {
+      // Get user profile photos
+      let photoUrl = '';
+      try {
+        const photos = await bot.getUserProfilePhotos(msg.from?.id || chatId);
+        if (photos.photos.length > 0) {
+          const fileId = photos.photos[0][0].file_id;
+          photoUrl = fileId;
+        }
+      } catch (error) {
+        console.error('Error getting profile photo:', error);
+      }
+
       const newUser = new User({
         telegramId: chatId,
         username: msg.from?.username || 'Anonymous',
-        photoUrl: msg.from?.photo?.big_file_id || '',
+        photoUrl,
         stars: 0,
       });
       await newUser.save();
