@@ -24,7 +24,6 @@ const queryClient = new QueryClient({
 function TelegramAuthCheck({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
   const navigate = useNavigate();
 
   React.useEffect(() => {
@@ -45,14 +44,12 @@ function TelegramAuthCheck({ children }: { children: React.ReactNode }) {
 
         // Initialize Telegram WebApp
         try {
-          // Ensure we're ready
           if (!twa.isExpanded) {
             twa.expand();
           }
           twa.ready();
         } catch (e) {
           console.warn('WebApp initialization warning:', e);
-          // Continue anyway as some errors are non-fatal
         }
 
         // Get user data from WebApp
@@ -74,28 +71,33 @@ function TelegramAuthCheck({ children }: { children: React.ReactNode }) {
           return config;
         });
 
-        // Initialize user session
-        try {
-          const response = await axios.post('/api/auth/initialize');
-          if (response.data) {
-            queryClient.setQueryData('userData', response.data);
-            setIsAuthenticated(true);
-            setIsLoading(false);
-            return;
-          }
-        } catch (e: any) {
-          if (e.response?.data?.error?.includes('start the bot')) {
-            const botUsername = e.response?.data?.botUsername || 'starnight9bot';
-            window.location.href = `https://t.me/${botUsername}?start=webapp`;
-            return;
-          }
-          throw e;
+        // Check session status
+        const sessionResponse = await axios.get('/api/auth/session');
+        if (sessionResponse.data) {
+          queryClient.setQueryData('userData', sessionResponse.data);
+          setIsLoading(false);
+          navigate('/'); // Redirect to home after successful auth
+          return;
+        }
+
+        // If no session, try to initialize
+        const response = await axios.post('/api/auth/initialize');
+        if (response.data) {
+          queryClient.setQueryData('userData', response.data);
+          setIsLoading(false);
+          navigate('/'); // Redirect to home after initialization
+          return;
         }
 
         setError('Failed to initialize user data');
         setIsLoading(false);
       } catch (e: any) {
         console.error('Error initializing app:', e);
+        if (e.response?.data?.error?.includes('start the bot')) {
+          const botUsername = e.response?.data?.botUsername || 'starnight9bot';
+          window.location.href = `https://t.me/${botUsername}?start=webapp`;
+          return;
+        }
         const errorMessage = e.response?.data?.error || e.message || 'Unable to initialize app';
         setError(errorMessage);
         setIsLoading(false);
@@ -133,10 +135,6 @@ function TelegramAuthCheck({ children }: { children: React.ReactNode }) {
         </div>
       </div>
     );
-  }
-
-  if (!isAuthenticated) {
-    return null;
   }
 
   return <>{children}</>;
