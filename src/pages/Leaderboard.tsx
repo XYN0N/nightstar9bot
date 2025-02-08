@@ -1,4 +1,3 @@
-import React from 'react';
 import { Trophy } from 'lucide-react';
 import { useQuery } from 'react-query';
 import { getLeaderboard } from '../api/user';

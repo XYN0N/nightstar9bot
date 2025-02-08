@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getGameStatus } from '../api/game';
 import { useSocket } from '../hooks/useSocket';
 import { Game as GameType } from '../types';
+import { useState } from 'react';
 
 function Game() {
   const { gameId } = useParams<{ gameId: string }>();
@@ -12,8 +13,8 @@ function Game() {
     enabled: !!gameId
   });
 
-  const [flipping, setFlipping] = React.useState(false);
-  const [result, setResult] = React.useState<'heads' | 'tails' | null>(null);
+  const [flipping, setFlipping] = useState<boolean>(false);
+  const [result, setResult] = useState<'heads' | 'tails' | null>(null);
 
   useSocket(gameId, (updatedGame: GameType) => {
     if (updatedGame.status === 'playing') {
@@ -116,4 +117,4 @@ function Game() {
   );
 }
 
-export default Game
+export default Game;
