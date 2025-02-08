@@ -2,10 +2,10 @@ import { Room, Client } from "@colyseus/core";
 import { Schema, type, MapSchema } from "@colyseus/schema";
 
 class PlayerState extends Schema {
-  @type("string") id!: string;
-  @type("string") username!: string;
-  @type("number") stars!: number;
-  @type("boolean") ready!: boolean;
+  @type("string") id: string;
+  @type("string") username: string;
+  @type("number") stars: number;
+  @type("boolean") ready: boolean;
 
   constructor() {
     super();
@@ -15,7 +15,7 @@ class PlayerState extends Schema {
     this.ready = false;
   }
 
-  setState(data: { id: string; username: string; stars: number }) {
+  assign(data: { id: string; username: string; stars: number }) {
     this.id = data.id;
     this.username = data.username;
     this.stars = data.stars;
@@ -25,11 +25,11 @@ class PlayerState extends Schema {
 }
 
 class GameState extends Schema {
-  @type("string") status!: string;
-  @type("number") betAmount!: number;
+  @type("string") status: string;
+  @type("number") betAmount: number;
   @type({ map: PlayerState }) players = new MapSchema<PlayerState>();
-  @type("string") winner!: string;
-  @type("string") coinSide!: string;
+  @type("string") winner: string;
+  @type("string") coinSide: string;
 
   constructor() {
     super();
@@ -66,7 +66,7 @@ export class GameRoom extends Room<GameState> {
   }
 
   onJoin(client: Client, options: { username: string; stars: number }) {
-    const player = new PlayerState().setState({
+    const player = new PlayerState().assign({
       id: client.sessionId,
       username: options.username,
       stars: options.stars

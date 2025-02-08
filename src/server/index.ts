@@ -70,51 +70,12 @@ async function getUserProfilePhoto(userId: number): Promise<string> {
 // Helper function to check if user has started the bot
 async function hasUserStartedBot(userId: number): Promise<boolean> {
   try {
-    const chatMember = await bot.api.getChatMember(userId, userId);
+    const chatMember = await bot.api.getChatMember('@starnight9bot', userId);
     return chatMember.status !== 'left' && chatMember.status !== 'kicked';
   } catch (error) {
+    console.error('Error checking bot start status:', error);
     return false;
   }
-}
-
-// Session middleware
-async function getOrCreateSession(telegramId: number) {
-  const sessionKey = `session:${telegramId}`;
-  
-  // Check if user has started the bot
-  const hasStarted = await hasUserStartedBot(telegramId);
-  if (!hasStarted) {
-    return null;
-  }
-  
-  // Try to get existing session
-  const existingSession = await redis.get(sessionKey);
-  if (existingSession) {
-    return JSON.parse(existingSession);
-  }
-  
-  // No session found, create new one
-  const user = await User.findOne({ telegramId });
-  if (!user) {
-    return null;
-  }
-  
-  const sessionData = {
-    id: user._id,
-    telegramId: user.telegramId,
-    username: user.username,
-    photoUrl: user.photoUrl,
-    stars: user.stars,
-    isPremium: user.isPremium,
-    totalWins: user.totalWins,
-    totalLosses: user.totalLosses,
-    totalEarnings: user.totalEarnings
-  };
-  
-  // Store new session
-  await redis.set(sessionKey, JSON.stringify(sessionData), 'EX', 86400);
-  
-  return sessionData;
 }
 
 // API Routes
@@ -125,54 +86,62 @@ app.post('/api/auth/initialize', verifyTelegramWebAppData, async (req, res) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // Get session data
-    const session = await getOrCreateSession(telegramUser.id);
-    if (!session) {
+    // Check if user has started the bot
+    const hasStarted = await hasUserStartedBot(telegramUser.id);
+    if (!hasStarted) {
       return res.status(401).json({ 
         error: 'Please start the bot first',
-        botUsername: process.env.BOT_USERNAME
+        botUsername: process.env.BOT_USERNAME || 'starnight9bot'
       });
     }
 
-    res.json(session);
+    // Get or create user
+    let user = await User.findOne({ telegramId: telegramUser.id });
+    
+    if (!user) {
+      // Get user's profile photo
+      const photoUrl = await getUserProfilePhoto(telegramUser.id);
+      
+      // Create new user
+      user = await User.create({
+        telegramId: telegramUser.id,
+        username: telegramUser.username || `user${telegramUser.id}`,
+        firstName: telegramUser.first_name,
+        lastName: telegramUser.last_name,
+        photoUrl,
+        stars: 100, // Starting amount
+        lastActive: new Date()
+      });
+    } else {
+      // Update user's info
+      user.username = telegramUser.username || user.username;
+      user.firstName = telegramUser.first_name;
+      user.lastName = telegramUser.last_name;
+      user.lastActive = new Date();
+      await user.save();
+    }
+
+    // Store session in Redis
+    const sessionKey = `session:${telegramUser.id}`;
+    const sessionData = {
+      id: user._id,
+      telegramId: user.telegramId,
+      username: user.username,
+      photoUrl: user.photoUrl,
+      stars: user.stars,
+      isPremium: user.isPremium,
+      totalWins: user.totalWins,
+      totalLosses: user.totalLosses,
+      totalEarnings: user.totalEarnings
+    };
+
+    await redis.set(sessionKey, JSON.stringify(sessionData), 'EX', 86400); // 24 hours
+
+    res.json(sessionData);
   } catch (error) {
     console.error('Error initializing user:', error);
     res.status(500).json({ error: 'Failed to initialize user' });
   }
-});
-
-// Get session status
-app.get('/api/auth/session', verifyTelegramWebAppData, async (req, res) => {
-  try {
-    const telegramUser = req.telegramUser;
-    if (!telegramUser) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const session = await getOrCreateSession(telegramUser.id);
-    if (!session) {
-      return res.status(401).json({ 
-        error: 'Please start the bot first',
-        botUsername: process.env.BOT_USERNAME
-      });
-    }
-
-    res.json(session);
-  } catch (error) {
-    console.error('Error getting session:', error);
-    res.status(500).json({ error: 'Failed to get session' });
-  }
-});
-
-// Serve static files
-app.use(express.static(distPath));
-
-// Colyseus monitor
-app.use('/colyseus', monitor());
-
-// Catch-all route for SPA
-app.get('*', (req, res) => {
-  res.sendFile(path.join(distPath, 'index.html'));
 });
 
 // Bot commands
@@ -184,17 +153,8 @@ bot.command("start", async (ctx) => {
     // Get user profile photo
     const photoUrl = await getUserProfilePhoto(user.id);
 
-    // Check if user is premium
-    let isPremium = false;
-    try {
-      const chatMember = await bot.api.getChatMember(user.id, user.id);
-      isPremium = chatMember.user.is_premium || false;
-    } catch (error) {
-      console.error('Error checking premium status:', error);
-    }
-
-    // Create or update user in database
-    await User.findOneAndUpdate(
+    // Create or update user
+    const userData = await User.findOneAndUpdate(
       { telegramId: user.id },
       {
         $set: {
@@ -202,7 +162,6 @@ bot.command("start", async (ctx) => {
           firstName: user.first_name,
           lastName: user.last_name,
           photoUrl,
-          isPremium,
           lastActive: new Date()
         },
         $setOnInsert: {
@@ -216,25 +175,23 @@ bot.command("start", async (ctx) => {
     );
 
     // Create session immediately
+    const sessionKey = `session:${user.id}`;
     const sessionData = {
-      telegramId: user.id,
-      username: user.username || `user${user.id}`,
-      photoUrl,
-      stars: 100,
-      isPremium,
-      totalWins: 0,
-      totalLosses: 0,
-      totalEarnings: 0
+      id: userData._id,
+      telegramId: userData.telegramId,
+      username: userData.username,
+      photoUrl: userData.photoUrl,
+      stars: userData.stars,
+      isPremium: userData.isPremium,
+      totalWins: userData.totalWins,
+      totalLosses: userData.totalLosses,
+      totalEarnings: userData.totalEarnings
     };
 
-    await redis.set(
-      `session:${user.id}`,
-      JSON.stringify(sessionData),
-      'EX',
-      86400 // 24 hours
-    );
+    await redis.set(sessionKey, JSON.stringify(sessionData), 'EX', 86400);
 
     // Send welcome message with web app button
+    const webAppUrl = process.env.APP_URL || 'https://nightstar9bot-d607ada78002.herokuapp.com';
     await ctx.reply(
       'Welcome to StarNight! 🌟\n\nYour account has been created with 100 stars to start playing!\n\nClick the button below to start playing!',
       {
@@ -242,7 +199,7 @@ bot.command("start", async (ctx) => {
           inline_keyboard: [[
             { 
               text: '🎮 Play Now', 
-              web_app: { url: process.env.APP_URL || 'https://nightstar9bot-d607ada78002.herokuapp.com' } 
+              web_app: { url: webAppUrl } 
             }
           ]]
         }
@@ -252,6 +209,17 @@ bot.command("start", async (ctx) => {
     console.error('Error in start command:', error);
     await ctx.reply('Sorry, there was an error. Please try again later.');
   }
+});
+
+// Serve static files
+app.use(express.static(distPath));
+
+// Colyseus monitor
+app.use('/colyseus', monitor());
+
+// Catch-all route for SPA
+app.get('*', (req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'));
 });
 
 // Start bot
