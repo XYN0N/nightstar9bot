@@ -57,4 +57,35 @@ function Profile() {
         </div>
       </div>
 
-     
+      <div className="bg-white/10 p-4 rounded-lg">
+        <div className="flex items-center gap-2 mb-4">
+          <Trophy className="w-5 h-5 text-yellow-400" />
+          <h2 className="text-xl font-semibold">Badges</h2>
+        </div>
+        <div className="grid grid-cols-5 gap-2">
+          {BADGE_LEVELS.map((level) => (
+            <div
+              key={level}
+              className={`aspect-square rounded-lg flex items-center justify-center ${
+                user.totalEarnings >= level
+                  ? 'bg-yellow-400 text-black'
+                  : 'bg-white/5'
+              }`}
+            >
+              <Star className="w-6 h-6" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <Link
+        to="/leaderboard"
+        className="block w-full p-4 bg-white/10 rounded-lg text-center font-semibold hover:bg-white/20 transition-colors"
+      >
+        View Leaderboard
+      </Link>
+    </div>
+  );
+}
+
+export default Profile;
