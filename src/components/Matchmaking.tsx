@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from 'react-query';
-import { getActiveLobbies, joinLobby } from '../api';
+import { getActiveLobbies, joinLobby } from '../api/game';
 import WebApp from '@twa-dev/sdk';
 
 const Matchmaking = () => {
@@ -17,7 +17,7 @@ const Matchmaking = () => {
     }
   }, [activeLobbies]);
 
-  const handleJoin = (lobbyId) => {
+  const handleJoin = (lobbyId: string) => {
     joinLobby(lobbyId)
       .then(() => {
         navigate(`/game/${lobbyId}`);
