@@ -14,6 +14,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs-extra';
 import { GameRoom } from "./rooms/GameRoom.js";
 import { User } from './models/User.js';
+import { verifyTelegramWebAppData } from './middleware/auth.js';
 
 // Load environment variables
 dotenv.config();
@@ -24,6 +25,7 @@ const __dirname = path.dirname(__filename);
 // Calculate paths
 const rootDir = path.resolve(__dirname, '../../..');
 const distDir = path.join(rootDir, 'dist');
+const clientDir = path.join(distDir, 'client');
 
 const app = express();
 const httpServer = createServer(app);
@@ -37,13 +39,27 @@ app.use(cors({
 // Middleware
 app.use(express.json());
 
-// Initialize Redis
-const redis = new Redis(process.env.REDIS_URL || '');
+// Initialize Redis with retry strategy
+const redis = new Redis(process.env.REDIS_URL || '', {
+  retryStrategy(times) {
+    const delay = Math.min(times * 50, 2000);
+    return delay;
+  }
+});
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URL || '')
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => console.error('MongoDB connection error:', err));
+// Connect to MongoDB with retries
+const connectMongoDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGODB_URL || '');
+    console.log('MongoDB connected successfully');
+  } catch (error) {
+    console.error('MongoDB connection error:', error);
+    console.log('Retrying in 5 seconds...');
+    setTimeout(connectMongoDB, 5000);
+  }
+};
+
+connectMongoDB();
 
 // Initialize Telegram bot
 const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN || '');
@@ -59,6 +75,8 @@ const gameServer = new Server({
 gameServer.define("game", GameRoom);
 
 // API Routes
+app.use('/api', verifyTelegramWebAppData);
+
 app.post('/api/auth/initialize', async (req, res) => {
   try {
     // In development, create a mock user
@@ -105,20 +123,28 @@ app.post('/api/auth/initialize', async (req, res) => {
 // Colyseus monitor
 app.use('/colyseus', monitor());
 
-// In development, only handle API requests
-if (process.env.NODE_ENV === 'development') {
+// Serve static files in production
+if (process.env.NODE_ENV === 'production') {
+  // Ensure client directory exists
+  if (!fs.existsSync(clientDir)) {
+    console.error('Client directory not found:', clientDir);
+    process.exit(1);
+  }
+
+  app.use(express.static(clientDir));
+  
+  // Serve index.html for all routes
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(clientDir, 'index.html'));
+  });
+} else {
+  // In development, proxy non-API requests to Vite dev server
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api')) {
       next();
     } else {
       res.redirect('http://localhost:5173' + req.path);
     }
-  });
-} else {
-  // In production, serve static files
-  app.use(express.static(path.join(distDir, 'client')));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(distDir, 'client', 'index.html'));
   });
 }
 
@@ -132,4 +158,5 @@ const port = process.env.PORT || 3000;
 httpServer.listen(port, () => {
   console.log(`Server running on port ${port}`);
   console.log('Environment:', process.env.NODE_ENV);
+  console.log('Client directory:', clientDir);
 });
