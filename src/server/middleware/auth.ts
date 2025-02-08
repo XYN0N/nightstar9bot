@@ -1,8 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
 import { TELEGRAM_BOT_TOKEN } from '../../config/telegram.js';
+import { User } from '../models/User.js';
 
-export function verifyTelegramWebAppData(req: Request, res: Response, next: NextFunction) {
+export async function verifyTelegramWebAppData(req: Request, res: Response, next: NextFunction) {
   const initData = req.headers['x-telegram-init-data'] as string;
   const userData = req.headers['x-telegram-user'] as string;
 
@@ -49,6 +50,22 @@ export function verifyTelegramWebAppData(req: Request, res: Response, next: Next
     
     if (calculatedHash !== hash) {
       return res.status(401).json({ error: 'Invalid Telegram data signature' });
+    }
+
+    // Check if user exists in database
+    const dbUser = await User.findOne({ telegramId: user.id });
+    if (!dbUser) {
+      // Create new user if they don't exist
+      const newUser = new User({
+        telegramId: user.id,
+        username: user.username || `user${user.id}`,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        photoUrl: user.photo_url,
+        stars: 100, // Starting balance
+        isPremium: user.is_premium || false
+      });
+      await newUser.save();
     }
 
     // Add user data to request

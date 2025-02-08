@@ -9,7 +9,6 @@ import Recharge from './pages/Recharge';
 import Leaderboard from './pages/Leaderboard';
 import AdminPanel from './pages/AdminPanel';
 import Layout from './components/Layout';
-import axios from 'axios';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -71,21 +70,12 @@ function TelegramAuthCheck({ children }: { children: React.ReactNode }) {
           return config;
         });
 
-        // Check session status
-        const sessionResponse = await axios.get('/api/auth/session');
-        if (sessionResponse.data) {
-          queryClient.setQueryData('userData', sessionResponse.data);
-          setIsLoading(false);
-          navigate('/'); // Redirect to home after successful auth
-          return;
-        }
-
-        // If no session, try to initialize
+        // Initialize user session
         const response = await axios.post('/api/auth/initialize');
         if (response.data) {
           queryClient.setQueryData('userData', response.data);
           setIsLoading(false);
-          navigate('/'); // Redirect to home after initialization
+          navigate('/profile'); // Redirect to profile page after auth
           return;
         }
 
@@ -163,4 +153,4 @@ function App() {
   );
 }
 
-export default App
+export default App;
