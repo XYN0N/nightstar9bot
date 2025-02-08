@@ -3,7 +3,7 @@ import { Server } from "@colyseus/core";
 import { WebSocketTransport } from "@colyseus/ws-transport";
 import { monitor } from "@colyseus/monitor";
 import { Bot } from "grammy";
-import express, { Request, Response, NextFunction } from 'express';
+import express from 'express';
 import { createServer } from 'http';
 import { Redis } from 'ioredis';
 import mongoose from 'mongoose';
@@ -96,7 +96,7 @@ function validateTelegramWebAppData(initData: string): boolean {
 }
 
 // Middleware to verify and parse Telegram WebApp data
-const verifyTelegramWebAppData = (req: Request, res: Response, next: NextFunction) => {
+const verifyTelegramWebAppData = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const initData = req.headers['x-telegram-init-data'] as string;
   if (!initData) {
     return res.status(401).json({ error: 'Please open this app through Telegram' });
@@ -126,7 +126,7 @@ const verifyTelegramWebAppData = (req: Request, res: Response, next: NextFunctio
 app.use('/api/*', verifyTelegramWebAppData);
 
 // Serve static files from the dist directory
-app.use(express.static(path.join(__dirname, '../../../dist')));
+app.use(express.static(path.join(__dirname, '../../dist')));
 
 // Models
 const UserSchema = new mongoose.Schema({
@@ -147,7 +147,7 @@ const UserSchema = new mongoose.Schema({
 const User = mongoose.model('User', UserSchema);
 
 // API Routes
-app.post('/api/auth/initialize', async (req: Request, res: Response) => {
+app.post('/api/auth/initialize', async (req: express.Request, res: express.Response) => {
   try {
     const telegramUser = req.telegramUser;
     if (!telegramUser) {
@@ -197,6 +197,11 @@ app.post('/api/auth/initialize', async (req: Request, res: Response) => {
   }
 });
 
+// Serve index.html for all other routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../../dist/index.html'));
+});
+
 // Bot commands
 bot.command("start", async (ctx) => {
   try {
@@ -221,6 +226,7 @@ bot.command("start", async (ctx) => {
 bot.start();
 
 // Start server
-const port = process.env.PORT || 3000;
-gameServer.listen(port);
-console.log(`Server running on port ${port}`);
+const port = Number(process.env.PORT) || 3000;
+httpServer.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});

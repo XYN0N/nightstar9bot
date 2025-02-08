@@ -11,7 +11,8 @@
     "types": ["node"],
     "allowJs": true,
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    "typeRoots": ["./node_modules/@types", "./src/server/types"]
   },
   "include": ["src/server/**/*", "src/config/**/*", "src/types/**/*"],
   "exclude": ["node_modules", "dist"]
