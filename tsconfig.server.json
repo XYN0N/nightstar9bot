@@ -12,6 +12,7 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "useDefineForClassFields": false,
+    "types": ["node"],
     "typeRoots": ["./node_modules/@types", "./src/server/types"]
   },
   "include": ["src/server/**/*", "src/config/**/*", "src/types/**/*"],
