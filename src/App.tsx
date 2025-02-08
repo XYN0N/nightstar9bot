@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
@@ -26,47 +26,55 @@ function TelegramAuthCheck({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+  const navigate = useNavigate();
 
   React.useEffect(() => {
     const initializeApp = async () => {
       try {
         // Check if we're in Telegram
-        if (!window.Telegram?.WebApp) {
+        const twa = window.Telegram?.WebApp;
+        if (!twa) {
           setError('Please open this app through Telegram');
           setIsLoading(false);
           return;
         }
 
         // Initialize Telegram WebApp
-        window.Telegram.WebApp.ready();
-        window.Telegram.WebApp.expand();
+        twa.ready();
+        twa.expand();
 
         // Set up axios interceptor for Telegram data
         axios.interceptors.request.use((config) => {
           if (config.headers) {
-            config.headers['X-Telegram-Init-Data'] = window.Telegram.WebApp.initData;
-            if (window.Telegram.WebApp.initDataUnsafe?.user) {
-              config.headers['X-Telegram-User'] = JSON.stringify(window.Telegram.WebApp.initDataUnsafe.user);
+            config.headers['X-Telegram-Init-Data'] = twa.initData;
+            if (twa.initDataUnsafe?.user) {
+              config.headers['X-Telegram-User'] = JSON.stringify(twa.initDataUnsafe.user);
             }
           }
           return config;
         });
 
-        // Check session status first
-        const sessionResponse = await axios.get('/api/auth/session');
-        if (sessionResponse.data) {
-          queryClient.setQueryData('userData', sessionResponse.data);
-          setIsAuthenticated(true);
-          setIsLoading(false);
-          return;
+        // Try to get existing session first
+        try {
+          const sessionResponse = await axios.get('/api/auth/session');
+          if (sessionResponse.data) {
+            queryClient.setQueryData('userData', sessionResponse.data);
+            setIsAuthenticated(true);
+            setIsLoading(false);
+            return;
+          }
+        } catch (error) {
+          console.log('No existing session, creating new one...');
         }
 
-        // If no session, initialize user
+        // Initialize new session
         const response = await axios.post('/api/auth/initialize');
         if (response.data) {
           queryClient.setQueryData('userData', response.data);
           setIsAuthenticated(true);
           setIsLoading(false);
+          // Redirect to home after successful authentication
+          navigate('/', { replace: true });
           return;
         }
 
@@ -76,7 +84,7 @@ function TelegramAuthCheck({ children }: { children: React.ReactNode }) {
         console.error('Error initializing app:', e);
         const errorMessage = e.response?.data?.error || e.message || 'Unable to initialize app';
         const botUsername = e.response?.data?.botUsername || 'starnight9bot';
-        setError(`${errorMessage}`);
+        setError(errorMessage);
         if (errorMessage.includes('start the bot')) {
           window.location.href = `https://t.me/${botUsername}?start=webapp`;
         }
@@ -85,7 +93,7 @@ function TelegramAuthCheck({ children }: { children: React.ReactNode }) {
     };
 
     initializeApp();
-  }, []);
+  }, [navigate]);
 
   if (isLoading) {
     return (
