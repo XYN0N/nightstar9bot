@@ -25,6 +25,7 @@ const queryClient = new QueryClient({
 function TelegramAuthCheck({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
 
   React.useEffect(() => {
     const initializeApp = async () => {
@@ -51,10 +52,20 @@ function TelegramAuthCheck({ children }: { children: React.ReactNode }) {
           return config;
         });
 
-        // Initialize user session
+        // Check session status first
+        const sessionResponse = await axios.get('/api/auth/session');
+        if (sessionResponse.data) {
+          queryClient.setQueryData('userData', sessionResponse.data);
+          setIsAuthenticated(true);
+          setIsLoading(false);
+          return;
+        }
+
+        // If no session, initialize user
         const response = await axios.post('/api/auth/initialize');
         if (response.data) {
           queryClient.setQueryData('userData', response.data);
+          setIsAuthenticated(true);
           setIsLoading(false);
           return;
         }
@@ -104,6 +115,10 @@ function TelegramAuthCheck({ children }: { children: React.ReactNode }) {
         </div>
       </div>
     );
+  }
+
+  if (!isAuthenticated) {
+    return null;
   }
 
   return <>{children}</>;
