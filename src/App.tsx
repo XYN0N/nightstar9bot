@@ -10,38 +10,24 @@ import Leaderboard from './pages/Leaderboard';
 import AdminPanel from './pages/AdminPanel';
 import Layout from './components/Layout';
 import axios from 'axios';
+import { WebApp } from '@twa-dev/sdk';
 
 const queryClient = new QueryClient();
 
 function App() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [isTelegram, setIsTelegram] = React.useState(false);
 
   React.useEffect(() => {
     const initializeApp = async () => {
       try {
-        // Check if we're in Telegram
-        const twa = window.Telegram?.WebApp;
-        if (!twa) {
-          throw new Error('This app is only available through Telegram.');
-        }
-
-        setIsTelegram(true);
-
         // Initialize Telegram WebApp
-        twa.ready();
+        WebApp.ready();
         
-        // Get initData
-        const initData = twa.initData;
-        if (!initData) {
-          throw new Error('No Telegram data available. Please open this app through Telegram.');
-        }
-
         // Set up axios interceptor
         axios.interceptors.request.use((config) => {
           if (config.headers) {
-            config.headers['X-Telegram-Init-Data'] = initData;
+            config.headers['X-Telegram-Init-Data'] = WebApp.initData;
           }
           return config;
         });
@@ -65,25 +51,6 @@ function App() {
 
     initializeApp();
   }, []);
-
-  if (!isTelegram) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 to-purple-900 text-white flex items-center justify-center">
-        <div className="text-center p-8">
-          <h1 className="text-4xl font-bold mb-4">⭐️ StarNight</h1>
-          <p className="text-xl mb-6">This app is only available through Telegram.</p>
-          <a 
-            href="https://t.me/starnight9bot"
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="px-6 py-3 bg-blue-500 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
-          >
-            Open in Telegram
-          </a>
-        </div>
-      </div>
-    );
-  }
 
   if (isLoading) {
     return (
