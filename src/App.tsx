@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
@@ -22,59 +22,40 @@ const queryClient = new QueryClient({
   }
 });
 
-function AuthenticatedApp() {
-  const navigate = useNavigate();
+function TelegramAuthCheck({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     const initializeApp = async () => {
       try {
-        // Check if we're in Telegram WebApp
+        // Check if we're in Telegram
         if (!window.Telegram?.WebApp) {
           setError('Please open this app through Telegram');
           setIsLoading(false);
           return;
         }
 
-        // Initialize WebApp
+        // Initialize Telegram WebApp
         window.Telegram.WebApp.ready();
         window.Telegram.WebApp.expand();
 
-        // Get initData and user data
-        const initData = window.Telegram.WebApp.initData;
-        const userData = window.Telegram.WebApp.initDataUnsafe?.user;
-
-        if (!initData || !userData) {
-          setError('Invalid Telegram data');
-          setIsLoading(false);
-          return;
-        }
-
-        // Set up axios interceptors
+        // Set up axios interceptor for Telegram data
         axios.interceptors.request.use((config) => {
           if (config.headers) {
-            config.headers['X-Telegram-Init-Data'] = initData;
-            config.headers['X-Telegram-User'] = JSON.stringify(userData);
+            config.headers['X-Telegram-Init-Data'] = window.Telegram.WebApp.initData;
+            if (window.Telegram.WebApp.initDataUnsafe?.user) {
+              config.headers['X-Telegram-User'] = JSON.stringify(window.Telegram.WebApp.initDataUnsafe.user);
+            }
           }
           return config;
         });
 
-        // Check session status first
-        const sessionResponse = await axios.get('/api/auth/session');
-        if (sessionResponse.data) {
-          queryClient.setQueryData('userData', sessionResponse.data);
+        // Initialize user session
+        const response = await axios.post('/api/auth/initialize');
+        if (response.data) {
+          queryClient.setQueryData('userData', response.data);
           setIsLoading(false);
-          navigate('/home', { replace: true });
-          return;
-        }
-
-        // If no session, initialize user
-        const initResponse = await axios.post('/api/auth/initialize');
-        if (initResponse.data) {
-          queryClient.setQueryData('userData', initResponse.data);
-          setIsLoading(false);
-          navigate('/home', { replace: true });
           return;
         }
 
@@ -89,7 +70,7 @@ function AuthenticatedApp() {
     };
 
     initializeApp();
-  }, [navigate]);
+  }, []);
 
   if (isLoading) {
     return (
@@ -132,28 +113,27 @@ function AuthenticatedApp() {
     );
   }
 
-  return (
-    <Routes>
-      <Route path="/" element={<Layout />}>
-        <Route index element={<Navigate to="/home" replace />} />
-        <Route path="home" element={<Home />} />
-        <Route path="profile" element={<Profile />} />
-        <Route path="challenges" element={<Challenges />} />
-        <Route path="game/:gameId" element={<Game />} />
-        <Route path="recharge" element={<Recharge />} />
-        <Route path="leaderboard" element={<Leaderboard />} />
-        <Route path="admin" element={<AdminPanel />} />
-        <Route path="*" element={<Navigate to="/home" replace />} />
-      </Route>
-    </Routes>
-  );
+  return <>{children}</>;
 }
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <AuthenticatedApp />
+        <TelegramAuthCheck>
+          <Routes>
+            <Route path="/" element={<Layout />}>
+              <Route index element={<Home />} />
+              <Route path="profile" element={<Profile />} />
+              <Route path="challenges" element={<Challenges />} />
+              <Route path="game/:gameId" element={<Game />} />
+              <Route path="recharge" element={<Recharge />} />
+              <Route path="leaderboard" element={<Leaderboard />} />
+              <Route path="admin" element={<AdminPanel />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
+          </Routes>
+        </TelegramAuthCheck>
       </BrowserRouter>
     </QueryClientProvider>
   );
