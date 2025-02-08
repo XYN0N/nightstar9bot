@@ -14,7 +14,9 @@ import { GameRoom } from "./rooms/GameRoom.js";
 import { TELEGRAM_BOT_TOKEN, ADMIN_ID } from '../config/telegram.js';
 import { REDIS_URL, MONGODB_URL } from '../config/database.js';
 import { User } from './models/User.js';
-import crypto from 'crypto';
+import { verifyTelegramWebAppData } from './middleware/auth.js';
+import { validateGameRequest } from './middleware/game.js';
+import type { Request, Response } from 'express';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -38,7 +40,7 @@ const connectWithRetry = () => {
   mongoose.connect(MONGODB_URL, {
     serverSelectionTimeoutMS: 5000,
     socketTimeoutMS: 45000,
-    family: 4, // Force IPv4
+    family: 4
   })
   .then(() => {
     console.log('MongoDB connected successfully');
@@ -68,69 +70,8 @@ gameServer.define("game", GameRoom);
 // Middleware
 app.use(express.json());
 
-// Function to validate Telegram WebApp data
-function validateTelegramWebAppData(initData: string): boolean {
-  try {
-    const urlParams = new URLSearchParams(initData);
-    const hash = urlParams.get('hash');
-    if (!hash) return false;
-    
-    urlParams.delete('hash');
-    
-    // Sort parameters alphabetically
-    const params = Array.from(urlParams.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, value]) => `${key}=${value}`)
-      .join('\n');
-    
-    // Calculate HMAC-SHA256
-    const secret = crypto.createHmac('sha256', 'WebAppData')
-      .update(TELEGRAM_BOT_TOKEN)
-      .digest();
-    
-    const calculatedHash = crypto.createHmac('sha256', secret)
-      .update(params)
-      .digest('hex');
-    
-    return calculatedHash === hash;
-  } catch (error) {
-    console.error('Error validating Telegram data:', error);
-    return false;
-  }
-}
-
-// Middleware to verify and parse Telegram WebApp data
-const verifyTelegramWebAppData = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  const initData = req.headers['x-telegram-init-data'] as string;
-  if (!initData) {
-    return res.status(401).json({ error: 'Please open this app through Telegram' });
-  }
-
-  try {
-    // Validate the data
-    if (!validateTelegramWebAppData(initData)) {
-      return res.status(401).json({ error: 'Invalid Telegram data' });
-    }
-
-    const data = Object.fromEntries(new URLSearchParams(initData));
-    if (!data.user) {
-      return res.status(401).json({ error: 'No user data found' });
-    }
-
-    const user = JSON.parse(data.user);
-    req.telegramUser = user;
-    next();
-  } catch (error) {
-    console.error('Error verifying Telegram data:', error);
-    res.status(401).json({ error: 'Invalid Telegram data format' });
-  }
-};
-
-// Apply middleware to protected routes
-app.use('/api/*', verifyTelegramWebAppData);
-
 // API Routes
-app.post('/api/auth/initialize', async (req: express.Request, res: express.Response) => {
+app.post('/api/auth/initialize', verifyTelegramWebAppData, async (req: Request, res: Response) => {
   try {
     const telegramUser = req.telegramUser;
     if (!telegramUser) {
@@ -155,7 +96,6 @@ app.post('/api/auth/initialize', async (req: express.Request, res: express.Respo
       username: telegramUser.username || 'Anonymous',
       firstName: telegramUser.first_name,
       lastName: telegramUser.last_name,
-      languageCode: telegramUser.language_code,
       photoUrl,
       lastActive: new Date()
     };
@@ -164,14 +104,14 @@ app.post('/api/auth/initialize', async (req: express.Request, res: express.Respo
       { telegramId: telegramUser.id },
       { 
         $set: userData,
-        $setOnInsert: { stars: 100 } // Only set stars if this is a new user
+        $setOnInsert: { stars: 100 }
       },
       { upsert: true, new: true }
     );
 
     // Store session in Redis
     const sessionKey = `session:${telegramUser.id}`;
-    await redis.set(sessionKey, JSON.stringify(user), 'EX', 86400); // 24 hours
+    await redis.set(sessionKey, JSON.stringify(user), 'EX', 86400);
 
     res.json(user);
   } catch (error) {
