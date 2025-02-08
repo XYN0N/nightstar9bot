@@ -37,6 +37,8 @@ const bot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true });
 
 // Middleware
 app.use(express.json());
+
+// Serve static files from the dist directory
 app.use(express.static(path.join(__dirname, '../../')));
 
 // Models

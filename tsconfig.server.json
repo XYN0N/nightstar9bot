@@ -12,5 +12,5 @@
     "allowJs": true
   },
   "include": ["src/server/**/*", "src/config/**/*", "src/types/**/*"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "dist"]
 }
