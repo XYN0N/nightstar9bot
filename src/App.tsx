@@ -10,7 +10,6 @@ import Leaderboard from './pages/Leaderboard';
 import AdminPanel from './pages/AdminPanel';
 import Layout from './components/Layout';
 import axios from 'axios';
-import { WebApp } from '@twa-dev/sdk';
 
 const queryClient = new QueryClient();
 
@@ -21,13 +20,19 @@ function App() {
   React.useEffect(() => {
     const initializeApp = async () => {
       try {
+        // Check if we're in Telegram
+        const twa = window.Telegram?.WebApp;
+        if (!twa) {
+          throw new Error('This app is only available through Telegram.');
+        }
+
         // Initialize Telegram WebApp
-        WebApp.ready();
+        twa.ready();
         
         // Set up axios interceptor
         axios.interceptors.request.use((config) => {
           if (config.headers) {
-            config.headers['X-Telegram-Init-Data'] = WebApp.initData;
+            config.headers['X-Telegram-Init-Data'] = twa.initData;
           }
           return config;
         });
